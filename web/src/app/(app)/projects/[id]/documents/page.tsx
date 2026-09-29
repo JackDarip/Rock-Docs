@@ -5,6 +5,7 @@ import { Uploader } from "@/components/Uploader";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { DocKind, AckAddendum, DeleteDoc, ExtractSchedule } from "@/components/DocActions";
 import { SheetIndex } from "@/components/SheetIndex";
+import { PRODUCT_NAME } from "@/config/brand";
 
 const mb = (n: number) => `${(n / 1048576).toFixed(n > 1048576 * 10 ? 0 : 1)} MB`;
 
@@ -40,7 +41,7 @@ export default async function Documents({ params }: { params: Promise<{ id: stri
       )}
       <Card title="Bid package">
         {docs.length === 0 ? (
-          <EmptyState title="Nothing uploaded yet" body="Upload the documents the owner issued. TrueGrade splits the plan set into sheets, reads title blocks, and suggests what each file is for you to confirm." />
+          <EmptyState title="Nothing uploaded yet" body={`Upload the documents the owner issued. ${PRODUCT_NAME} splits the plan set into sheets, reads title blocks, and suggests what each file is for you to confirm.`} />
         ) : (
           <table className="tbl">
             <thead><tr><th>File</th><th>What it is</th><th>Pages</th><th>Status</th><th>Uploaded</th><th /></tr></thead>

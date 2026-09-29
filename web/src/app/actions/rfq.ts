@@ -62,7 +62,7 @@ const recipientSchema = z.object({
   saveToDirectory: z.boolean().optional(),
 });
 
-/** Record an RFQ sent outside TrueGrade so it shows up in the same tracker. */
+/** Record an RFQ sent outside the app so it shows up in the same tracker. */
 export async function markSent(rfqId: string, recipients: unknown[], sentAt: string | null) {
   const { db, user } = await requireCtx();
   const rfq = await db.rfq.findUnique({ where: { id: rfqId } });

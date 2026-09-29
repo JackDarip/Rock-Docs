@@ -32,7 +32,7 @@ export default async function Rfqs({ params }: { params: Promise<{ id: string }>
   const byCat = await db.materialLine.findMany({ where: { projectId: id }, select: { id: true, categoryCode: true } });
   const catOf = new Map(byCat.map((l) => [l.id, l.categoryCode ?? "MISC"]));
 
-  // In-app reminders for RFQs sent outside TrueGrade: nudge the estimator, not the supplier.
+  // In-app reminders for RFQs sent outside the app: nudge the estimator, not the supplier.
   const soon = project.quoteDueAt && project.quoteDueAt.getTime() - Date.now() < 24 * 36e5;
   const waiting = soon ? recipients.filter((r) => r.status === "SENT") : [];
 

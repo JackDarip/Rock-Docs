@@ -3,7 +3,7 @@ import { requireCtx } from "@/lib/auth";
 import { setupStatus } from "@/lib/setup";
 import { PageHeader, Card, EmptyState, ButtonLink, Stat, fmtDateTime } from "@/components/ui";
 import { SetupProgress } from "@/components/SetupProgress";
-import { TAGLINE } from "@/config/brand";
+import { TAGLINE, PRODUCT_NAME } from "@/config/brand";
 
 export default async function Dashboard() {
   const { db, company } = await requireCtx();
@@ -23,13 +23,13 @@ export default async function Dashboard() {
       </div>
       {status.score < 100 && (
         <Card className="mb-6" title="Make it yours" actions={<ButtonLink href="/setup" variant="secondary">Open Company Setup</ButtonLink>}>
-          <p className="mb-4 text-sm text-muted">TrueGrade ships empty on purpose: every number in an estimate comes from your own costs. Finish these at your own pace; each step can be skipped and edited anytime.</p>
+          <p className="mb-4 text-sm text-muted">{PRODUCT_NAME} ships empty on purpose: every number in an estimate comes from your own costs. Finish these at your own pace; each step can be skipped and edited anytime.</p>
           <SetupProgress steps={status.steps} />
         </Card>
       )}
       <Card title="Upcoming bids" actions={<Link href="/projects" className="text-sm font-semibold text-navy-700">All bids →</Link>}>
         {projects.length === 0 ? (
-          <EmptyState title="No bids yet" body="Start a bid, upload the owner's plan set and bid schedule, and TrueGrade builds a draft takeoff for you to review."
+          <EmptyState title="No bids yet" body={`Start a bid, upload the owner's plan set and bid schedule, and ${PRODUCT_NAME} builds a draft takeoff for you to review.`}
             actions={<><ButtonLink href="/projects/new">Start a bid</ButtonLink><ButtonLink href="/setup" variant="secondary">Finish setup first</ButtonLink></>} />
         ) : (
           <table className="tbl">

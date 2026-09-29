@@ -7,7 +7,7 @@ export function EmailMethodPicker({ current, domain, readOnly, companyName }: { 
   const [m, setM] = useState(current);
   const [d, setD] = useState(domain);
   const options = [
-    { key: "TRUEGRADE", title: `${PRODUCT_NAME} sending`, tag: "Default · works now",
+    { key: "PLATFORM", title: `${PRODUCT_NAME} sending`, tag: "Default · works now",
       body: `Sent from our verified domain as "${companyName} via ${PRODUCT_NAME}". Replies go straight to the estimator.`,
       pros: "No setup. Good deliverability.", cons: "Suppliers see our domain in the From line." },
     { key: "DOMAIN", title: "Your company domain", tag: "Needs DNS",

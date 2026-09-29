@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-command TrueGrade launch on Railway.
+# One-command rockitdocs launch on Railway.
 #
 # Needs (as environment variables, never typed into chat or committed):
 #   RAILWAY_API_TOKEN     Railway account token (railway.com → Account Settings → Tokens)
@@ -9,14 +9,14 @@
 #   SEED_ADMIN_EMAIL      first admin's email (default admin@interstaterock.com)
 #   PLATFORM_ADMIN_EMAILS who can open /platform to add tenants
 #   CUSTOM_DOMAIN         default interstaterock.theanswerai.com
-#   PROJECT_NAME          default truegrade
+#   PROJECT_NAME          default rockitdocs
 #
 # Safe to re-run: existing project, database, variables and volume are reused.
 # Run from the web/ folder:  bash scripts/railway-deploy.sh
 set -euo pipefail
 
 RAILWAY="${RAILWAY_BIN:-npx -y @railway/cli@latest}"
-PROJECT_NAME="${PROJECT_NAME:-truegrade}"
+PROJECT_NAME="${PROJECT_NAME:-rockitdocs}"
 SERVICE="web"
 CUSTOM_DOMAIN="${CUSTOM_DOMAIN:-interstaterock.theanswerai.com}"
 

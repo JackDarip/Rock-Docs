@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveAssembly, duplicateAssembly, deleteSetupRecord } from "@/app/actions/setup";
+import { PRODUCT_NAME } from "@/config/brand";
 import {
   assemblyUnitCost, buildContext,
   type AssemblyT, type EquipmentT, type LaborRoleT, type MaterialT, type ProductionRateT,
@@ -115,7 +116,7 @@ function AsmForm({ asm, setup, ctx, readOnly, onDone }: { asm: Asm; setup: Setup
         {!readOnly && (setup.materials.length ? (
           <button className="btn btn-secondary btn-sm mt-2" onClick={() => setA({ ...a, materials: [...a.materials, { materialId: setup.materials[0].id, qtyPerUnit: 1 }] })}>+ Add material</button>
         ) : <p className="mt-2 text-xs text-muted">Add materials in Setup step 4 first.</p>)}
-        <p className="mt-2 text-xs text-muted">If you enter a CY quantity for a material you buy by the ton, TrueGrade converts it using that material&apos;s density.</p>
+        <p className="mt-2 text-xs text-muted">If you enter a CY quantity for a material you buy by the ton, {PRODUCT_NAME} converts it using that material&apos;s density.</p>
       </div>
 
       <div className="rounded-xl bg-night p-5 text-white">

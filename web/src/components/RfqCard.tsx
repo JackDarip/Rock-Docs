@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { markSent, setRecipientStatus } from "@/app/actions/rfq";
 import { Icon } from "@/components/Icon";
+import { PRODUCT_NAME } from "@/config/brand";
 
 type Supplier = { id: string; name: string; email: string | null; categories: string[]; preferred: boolean; serviceArea: string | null };
 type Recipient = { id: string; name: string; email: string | null; method: string; status: string; sentAt: string; token: string; supplierId: string | null };
@@ -80,7 +81,7 @@ export function RfqCard(props: {
             <ul className="space-y-1 text-sm">
               {recipients.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-paper px-2 py-1">
-                  <span><strong>{r.name}</strong> <span className="text-xs text-muted">{new Date(r.sentAt).toLocaleDateString()} · {r.method === "OUTSIDE" ? "Sent outside TrueGrade (no open tracking)" : "Sent from TrueGrade"}</span></span>
+                  <span><strong>{r.name}</strong> <span className="text-xs text-muted">{new Date(r.sentAt).toLocaleDateString()} · {r.method === "OUTSIDE" ? `Sent outside ${PRODUCT_NAME} (no open tracking)` : `Sent from ${PRODUCT_NAME}`}</span></span>
                   <span className="flex items-center gap-2">
                     <select className="cell-input text-xs" value={r.status} onChange={(e) => start(async () => { await setRecipientStatus(r.id, e.target.value as any); router.refresh(); })}>
                       <option value="SENT">Sent</option><option value="RESPONDED">Responded</option><option value="DECLINED">Declined</option>

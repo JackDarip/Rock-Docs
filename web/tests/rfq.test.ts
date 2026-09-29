@@ -25,7 +25,7 @@ describe("RFQ spreadsheets", () => {
     await wb.xlsx.load(buf as any);
     const ws = wb.getWorksheet("RFQ")!;
     expect(ws.getColumn(1).hidden).toBe(true);
-    expect(wb.getWorksheet("_truegrade")!.state).toBe("veryHidden");
+    expect(wb.getWorksheet("_rockitdocs")!.state).toBe("veryHidden");
     expect((ws as any).sheetProtection?.sheet).toBe(true);
     // Simulate the supplier filling in yellow cells
     ws.eachRow((r) => {

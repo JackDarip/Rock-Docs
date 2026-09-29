@@ -4,6 +4,7 @@ import { Card, Flag, AiBadge, Term, fmtNum, ButtonLink } from "@/components/ui";
 import { EditableTable } from "@/components/EditableTable";
 import { BidScheduleImport } from "@/components/BidScheduleImport";
 import { TakeoffApply } from "@/components/TakeoffApply";
+import { PRODUCT_NAME } from "@/config/brand";
 
 const SOURCE: Record<string, string> = { BID_SCHEDULE: "Owner bid schedule", TABULATED: "Table on plans", AI_MEASURE: "AI measurement", MANUAL: "Manual / your takeoff", LANDXML: "LandXML surfaces" };
 
@@ -69,7 +70,7 @@ export default async function BidItems({ params }: { params: Promise<{ id: strin
             })}
           </tbody>
         </table>
-        <p className="mt-3 text-xs text-muted">Earthwork: TrueGrade never computes cut/fill from PDF contours. Use the owner&apos;s quantity, an external earthwork takeoff (enter it with a source note), or LandXML surfaces (import coming in a later phase).</p>
+        <p className="mt-3 text-xs text-muted">Earthwork: {PRODUCT_NAME} never computes cut/fill from PDF contours. Use the owner&apos;s quantity, an external earthwork takeoff (enter it with a source note), or LandXML surfaces (import coming in a later phase).</p>
       </Card>
     </div>
   );

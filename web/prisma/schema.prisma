@@ -1,4 +1,4 @@
-// TrueGrade data model.
+// rockitdocs data model.
 // Every tenant-owned table carries companyId. The tenant-scoped Prisma client
 // (src/lib/db.ts) injects companyId into every query, so isolation is enforced
 // at the query layer rather than trusted to UI code.
@@ -35,7 +35,7 @@ model Company {
   rfqSignature       String?
   quoteExpiryDays    Int      @default(30)
   takeoffVariancePct Float    @default(5)
-  emailMethod        String   @default("TRUEGRADE")
+  emailMethod        String   @default("PLATFORM")
   customEmailDomain  String?
   aiMonthlyLimitUsd  Float    @default(50)
   setupProgress      Json     @default("{}")
@@ -460,7 +460,7 @@ model RfqRecipient {
   supplierId     String?
   name           String
   email          String?
-  method         String    @default("OUTSIDE") // OUTSIDE | TRUEGRADE
+  method         String    @default("OUTSIDE") // OUTSIDE | PLATFORM | DOMAIN | CONNECTED
   status         String    @default("SENT")    // SENT | OPENED | RESPONDED | DECLINED
   sentAt         DateTime  @default(now())
   token          String    @unique

@@ -8,9 +8,9 @@ export default async function EmailStep() {
   const { company, isAdmin } = await requireCtx();
   const domain = company.customEmailDomain ?? "yourcompany.com";
   const records = [
-    { type: "TXT", host: domain, value: `v=spf1 include:spf.truegrade-mail.com ~all` },
-    { type: "CNAME", host: `tg1._domainkey.${domain}`, value: `tg1.dkim.truegrade-mail.com` },
-    { type: "CNAME", host: `tg2._domainkey.${domain}`, value: `tg2.dkim.truegrade-mail.com` },
+    { type: "TXT", host: domain, value: `v=spf1 include:spf.rockitdocs-mail.com ~all` },
+    { type: "CNAME", host: `rd1._domainkey.${domain}`, value: `rd1.dkim.rockitdocs-mail.com` },
+    { type: "CNAME", host: `rd2._domainkey.${domain}`, value: `rd2.dkim.rockitdocs-mail.com` },
     { type: "TXT", host: `_dmarc.${domain}`, value: `v=DMARC1; p=none; rua=mailto:dmarc@${domain}` },
   ];
   return (

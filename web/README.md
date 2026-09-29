@@ -1,4 +1,4 @@
-# TrueGrade
+# rockitdocs
 
 Multi-tenant heavy civil / sitework estimating web app. Tenant #1 is Interstate Rock at
 `interstaterock.theanswerai.com`. The product name and tagline live only in
@@ -43,7 +43,7 @@ npm run typecheck
 `tests/isolation.test.ts` creates two tenants and attempts cross-tenant reads, updates,
 deletes and inserts of records, reads of uploaded files, and use of supplier quote links on
 the wrong subdomain. Every attempt must fail. The test needs a Postgres database at
-`TEST_DATABASE_URL` (default `postgresql://postgres:postgres@localhost:5432/truegrade_test`).
+`TEST_DATABASE_URL` (default `postgresql://postgres:postgres@localhost:5432/rockitdocs_test`).
 
 ## Deploy
 

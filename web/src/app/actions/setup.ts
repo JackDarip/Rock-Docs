@@ -31,7 +31,7 @@ const companyFields = z.object({
   quoteExpiryDays: z.number().int().min(1).max(365),
   takeoffVariancePct: z.number().min(0).max(100),
   aiMonthlyLimitUsd: z.number().min(0),
-  emailMethod: z.enum(["TRUEGRADE", "DOMAIN", "CONNECTED"]),
+  emailMethod: z.enum(["PLATFORM", "DOMAIN", "CONNECTED"]),
   customEmailDomain: z.string().nullable(),
 }).partial();
 
