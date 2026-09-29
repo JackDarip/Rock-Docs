@@ -38,11 +38,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <p className="text-sm text-mist/70">{PRODUCT_NAME} by {PLATFORM_OWNER}</p>
       </section>
       <section className="relative flex min-w-0 flex-col items-center justify-center px-4 pb-6 pt-6 sm:px-8 lg:pt-8">
-        <div className="mb-3 flex w-full max-w-[600px] items-center justify-between gap-3 lg:justify-center">
+        <div className="mb-3 flex w-full max-w-[600px] flex-wrap items-center justify-between gap-x-3 gap-y-2 lg:justify-center">
           <span className="lg:hidden"><Logo light /></span>
           <div className="flex min-w-0 items-center gap-2">
             {logo && <img src={logo} alt="" className="h-8 w-8 shrink-0 rounded-md bg-white object-contain p-0.5" />}
-            <span className="truncate text-xs font-semibold uppercase tracking-wider text-brand-hi">{tenant.name}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-brand-hi">{tenant.name}</span>
           </div>
         </div>
         {error && (
