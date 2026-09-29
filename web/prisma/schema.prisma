@@ -892,3 +892,20 @@ model ScopePackage {
 
   @@index([companyId, projectId])
 }
+
+// AI-read setup documents (wage determinations, equipment cost reports) waiting for review
+model ImportDraft {
+  id           String   @id @default(cuid())
+  companyId    String
+  kind         String // WAGES | EQUIPMENT
+  filename     String
+  storageKey   String
+  status       String   @default("PROCESSING") // PROCESSING | READY | FAILED | DONE
+  statusDetail String?
+  meta         Json?
+  rows         Json     @default("[]")
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  @@index([companyId])
+}

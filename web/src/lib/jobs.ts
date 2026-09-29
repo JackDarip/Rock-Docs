@@ -6,7 +6,9 @@ import { similarity } from "./rfq";
 import { bbox, packTin, parseLandXml } from "./landxml";
 import { diffSchedule } from "./addenda";
 import { sectionNumbers, normSection } from "./specs";
-import { extractSpecRequirements, suggestMeasurements } from "./ai";
+import { extractSpecRequirements, suggestMeasurements, extractJobCosts, extractWageDetermination, extractEquipmentReport } from "./ai";
+import ExcelJS from "exceljs";
+import { PDFDocument } from "pdf-lib";
 import { pageTextItems } from "./pdftext";
 import { newKey } from "./storage";
 import { deliver } from "./mail";
@@ -15,7 +17,7 @@ import { afterDelivery, sweepReminders } from "./rfqsend";
 // Postgres-backed background job queue with retries and progress. Runs inside
 // the web process by default (see instrumentation.ts) or as `npm run worker`.
 
-export type JobType = "PROCESS_DOCUMENT" | "EXTRACT_BID_SCHEDULE" | "EXTRACT_QUOTE" | "SEND_EMAIL" | "EXTRACT_ADDENDUM" | "EXTRACT_SPECS" | "SUGGEST_MEASURE";
+export type JobType = "PROCESS_DOCUMENT" | "EXTRACT_BID_SCHEDULE" | "EXTRACT_QUOTE" | "SEND_EMAIL" | "EXTRACT_ADDENDUM" | "EXTRACT_SPECS" | "SUGGEST_MEASURE" | "EXTRACT_JOB_COST" | "EXTRACT_SETUP_DOC";
 
 export async function enqueue(companyId: string, type: JobType, payload: Record<string, unknown>) {
   return prisma.job.create({ data: { companyId, type, payload: payload as any } });
@@ -196,6 +198,69 @@ async function suggestMeasure(companyId: string, p: { documentId: string; pageIn
   });
 }
 
+/** Spreadsheets become CSV text; photos become a one-page PDF; PDFs pass through. */
+async function aiInput(buf: Buffer, filename: string): Promise<{ pdf?: Buffer; text?: string }> {
+  if (/\.xlsx$/i.test(filename)) {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf as any);
+    const out: string[] = [];
+    wb.worksheets.forEach((ws) => {
+      out.push(`# Sheet: ${ws.name}`);
+      ws.eachRow((r) => out.push((r.values as any[]).slice(1).map((v) => (v && typeof v === "object" ? String(v.result ?? v.text ?? "") : String(v ?? ""))).join("\t")));
+    });
+    return { text: out.join("\n").slice(0, 400_000) };
+  }
+  if (/\.csv$/i.test(filename)) return { text: buf.toString("utf8").slice(0, 400_000) };
+  if (/\.(png|jpe?g)$/i.test(filename)) {
+    const doc = await PDFDocument.create();
+    const img = /\.png$/i.test(filename) ? await doc.embedPng(buf) : await doc.embedJpg(buf);
+    doc.addPage([img.width, img.height]).drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+    return { pdf: Buffer.from(await doc.save()) };
+  }
+  return { pdf: buf };
+}
+
+async function extractJobCost(companyId: string, p: { fileId: string }) {
+  const db = tenantDb(companyId);
+  const f = await db.jobCostFile.findUnique({ where: { id: p.fileId } });
+  if (!f) return;
+  try {
+    const res = await extractJobCosts(companyId, await aiInput(await storage.get(companyId, f.storageKey), f.filename), f.id);
+    const n = await db.jobCostLine.count({ where: { jobId: f.jobId } });
+    await db.jobCostLine.createMany({
+      data: res.lines.map((l, i) => ({
+        jobId: f.jobId, fileId: f.id, pageIndex: l.page - 1, activity: l.activity, quantity: l.quantity, unit: l.unit,
+        estimatedCost: l.estimated_cost, actualCost: l.actual_cost, estimatedHours: l.estimated_hours, actualHours: l.actual_hours,
+        equipment: l.equipment, materials: l.materials, confidence: l.confidence === "low" ? "LOW" : "HIGH", aiExtracted: true, status: "DRAFT", sortOrder: n + i,
+      })) as any,
+    });
+    const job = await db.historicalJob.findUnique({ where: { id: f.jobId } });
+    if (job && !job.jobNumber && res.job_number) await db.historicalJob.update({ where: { id: job.id }, data: { jobNumber: res.job_number } });
+    await db.jobCostFile.update({ where: { id: f.id }, data: { status: "READY", statusDetail: `Found ${res.lines.length} line${res.lines.length === 1 ? "" : "s"}; review them below` } });
+  } catch (e) {
+    await db.jobCostFile.update({ where: { id: f.id }, data: { status: "FAILED", statusDetail: e instanceof Error ? e.message : String(e) } });
+  }
+}
+
+async function extractSetupDoc(companyId: string, p: { draftId: string }) {
+  const db = tenantDb(companyId);
+  const d = await db.importDraft.findUnique({ where: { id: p.draftId } });
+  if (!d) return;
+  try {
+    const input = await aiInput(await storage.get(companyId, d.storageKey), d.filename);
+    if (d.kind === "WAGES") {
+      if (!input.pdf) throw new Error("Upload the wage determination as a PDF");
+      const r = await extractWageDetermination(companyId, input.pdf, d.id);
+      await db.importDraft.update({ where: { id: d.id }, data: { status: "READY", meta: { number: r.determination_number, effective: r.effective_date, counties: r.counties } as any, rows: r.rates as any, statusDetail: `Found ${r.rates.length} classifications` } });
+    } else {
+      const r = await extractEquipmentReport(companyId, input, d.id);
+      await db.importDraft.update({ where: { id: d.id }, data: { status: "READY", rows: r.items as any, statusDetail: `Found ${r.items.length} machines` } });
+    }
+  } catch (e) {
+    await db.importDraft.update({ where: { id: d.id }, data: { status: "FAILED", statusDetail: e instanceof Error ? e.message : String(e) } });
+  }
+}
+
 async function extractQuote(companyId: string, p: { documentId: string; quoteId: string }) {
   const db = tenantDb(companyId);
   const doc = await db.document.findUnique({ where: { id: p.documentId } });
@@ -245,6 +310,8 @@ export async function runOnce() {
     else if (job.type === "EXTRACT_ADDENDUM") await extractAddendum(job.companyId, payload);
     else if (job.type === "EXTRACT_SPECS") await extractSpecs(job.companyId, payload);
     else if (job.type === "SUGGEST_MEASURE") await suggestMeasure(job.companyId, payload);
+    else if (job.type === "EXTRACT_JOB_COST") await extractJobCost(job.companyId, payload);
+    else if (job.type === "EXTRACT_SETUP_DOC") await extractSetupDoc(job.companyId, payload);
     else if (job.type === "SEND_EMAIL") { await deliver(payload.messageId); await afterDelivery(job.companyId, payload.messageId, null); }
     await prisma.job.update({ where: { id: job.id }, data: { status: "DONE", progress: 100, error: null } });
   } catch (e) {

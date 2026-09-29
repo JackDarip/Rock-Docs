@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireCtx, requireAdminCtx } from "@/lib/auth";
 import { enqueue } from "@/lib/jobs";
 import { aiEnabled, assertAiBudget, estimateAiCost } from "@/lib/ai";
-import { newKey, storage } from "@/lib/storage";
+import { newKey, putScanned } from "@/lib/storage";
 import { currentRfqLines, hashLines, parseReturnedXlsx, rfqNumber, similarity } from "@/lib/rfq";
 
 async function project(projectId: string) {
@@ -111,9 +111,10 @@ export async function uploadQuotes(projectId: string, formData: FormData) {
   for (const file of files) {
     const buf = Buffer.from(await file.arrayBuffer());
     const key = newKey(company.id, `projects/${projectId}/quotes`, file.name);
-    await storage.put(company.id, key, buf);
+    let scan;
+    try { scan = await putScanned(company.id, key, buf); } catch (e) { out.push({ file: file.name, status: e instanceof Error ? e.message : "Upload refused" }); continue; }
     const doc = await db.document.create({
-      data: { projectId, filename: file.name, storageKey: key, size: buf.length, mime: file.type || "application/octet-stream", kind: "QUOTE", kindConfirmed: true, status: "READY", uploadedById: user.id } as any,
+      data: { projectId, filename: file.name, storageKey: key, size: buf.length, mime: file.type || "application/octet-stream", kind: "QUOTE", kindConfirmed: true, status: "READY", scanStatus: scan, uploadedById: user.id } as any,
     });
     if (/\.xlsx$/i.test(file.name)) {
       const parsed = await parseReturnedXlsx(buf);

@@ -6,7 +6,7 @@ import ExcelJS from "exceljs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdminCtx, requireCtx, hashPassword } from "@/lib/auth";
-import { newKey, storage } from "@/lib/storage";
+import { newKey, putScanned, storage } from "@/lib/storage";
 
 export async function skipStep(step: string) {
   const { company } = await requireCtx();
@@ -56,7 +56,7 @@ export async function uploadLogo(formData: FormData) {
   const isJpg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
   if (!isPng && !isJpg) return { ok: false as const, error: "Use a PNG or JPG image (they also appear on your PDFs and RFQ spreadsheets)" };
   const key = newKey(company.id, "branding", isPng ? "logo.png" : "logo.jpg");
-  await storage.put(company.id, key, buf);
+  try { await putScanned(company.id, key, buf); } catch (e) { return { ok: false as const, error: e instanceof Error ? e.message : "Upload refused" }; }
   const old = company.logoPath;
   const updated = await prisma.company.update({ where: { id: company.id }, data: { logoPath: key } });
   if (old) await storage.remove(company.id, old).catch(() => {});
@@ -97,7 +97,10 @@ export async function saveProductionRate(id: string | null, data: unknown) {
   const parsed = prodSchema.safeParse(data);
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues.map((i) => i.message).join("; ") };
   await assertOwned(db, parsed.data.crew);
-  const row = id ? await db.productionRate.update({ where: { id }, data: parsed.data }) : await db.productionRate.create({ data: parsed.data as any });
+  const prev = id ? await db.productionRate.findUnique({ where: { id } }) : null;
+  // A hand edit to the daily output means it's no longer the calibrated value.
+  const recal = prev?.calibratedAt && prev.outputPerDay !== parsed.data.outputPerDay ? { calibratedAt: null, calibrationNote: null } : {};
+  const row = id ? await db.productionRate.update({ where: { id }, data: { ...parsed.data, ...recal } }) : await db.productionRate.create({ data: parsed.data as any });
   revalidatePath("/setup/production");
   return { ok: true as const, id: row.id };
 }
