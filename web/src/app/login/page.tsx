@@ -22,9 +22,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (await getCurrentUser()) redirect("/");
   const { error } = await searchParams;
   return (
-    <main className="grid min-h-screen lg:grid-cols-2">
-      <section className="relative hidden flex-col justify-between overflow-hidden bg-night p-12 text-white lg:flex">
-        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand/20 blur-3xl" />
+    <main className="relative grid min-h-screen overflow-hidden bg-night text-white lg:grid-cols-2">
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/3 rounded-full bg-brand/15 blur-3xl" />
+      <section className="relative hidden flex-col justify-between p-12 lg:flex">
         <Logo light />
         <div>
           <h1 className="font-display text-6xl font-extrabold leading-none">
@@ -34,17 +34,17 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </div>
         <p className="text-sm text-mist/70">{PRODUCT_NAME} by {PLATFORM_OWNER}</p>
       </section>
-      <section className="flex items-center justify-center p-8">
-        <form action={login} className="card w-full max-w-sm p-8">
-          <div className="mb-6 lg:hidden"><Logo /></div>
+      <section className="relative flex items-center justify-center p-8">
+        <form action={login} className="w-full max-w-md">
+          <div className="mb-8 lg:hidden"><Logo light /></div>
           <div className="text-xs font-semibold uppercase tracking-wider text-brand">{tenant.name}</div>
-          <h2 className="mb-6 text-3xl font-bold">Sign in to {PRODUCT_NAME}</h2>
-          {error && <p className="mb-4 rounded-lg bg-warn-bg p-3 text-sm text-warn">That email and password didn&apos;t match. Try again.</p>}
-          <label className="label" htmlFor="email">Email</label>
-          <input id="email" name="email" type="email" autoComplete="email" required className="input mb-4" />
-          <label className="label" htmlFor="password">Password</label>
-          <input id="password" name="password" type="password" autoComplete="current-password" required className="input mb-6" />
-          <button className="btn btn-primary w-full justify-center">Sign in</button>
+          <h2 className="mb-8 text-4xl font-bold text-white">Sign in to {PRODUCT_NAME}</h2>
+          {error && <p className="mb-4 rounded-lg border border-warn-line/40 bg-warn/15 p-3 text-sm text-amber-200">That email and password didn&apos;t match. Try again.</p>}
+          <label className="label !text-mist" htmlFor="email">Email</label>
+          <input id="email" name="email" type="email" autoComplete="email" required className="input mb-5 !border-navy-700 !bg-navy-950 !text-white" />
+          <label className="label !text-mist" htmlFor="password">Password</label>
+          <input id="password" name="password" type="password" autoComplete="current-password" required className="input mb-8 !border-navy-700 !bg-navy-950 !text-white" />
+          <button className="btn btn-primary w-full justify-center py-3">Sign in</button>
         </form>
       </section>
     </main>
