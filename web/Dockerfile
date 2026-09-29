@@ -11,7 +11,7 @@ RUN npm run build
 FROM node:22-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 STORAGE_DIR=/data/storage
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 STORAGE_DIR=/data/storage TZ=America/Denver
 COPY --from=build /app ./
 VOLUME ["/data"]
 EXPOSE 3000

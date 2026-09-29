@@ -9,7 +9,8 @@ ADD COLUMN     "reminderHours" INTEGER[] DEFAULT ARRAY[48, 24]::INTEGER[],
 ALTER COLUMN "emailMethod" SET DEFAULT 'PLATFORM';
 
 -- AlterTable
-ALTER TABLE "Document" ADD COLUMN     "acknowledgedAt" TIMESTAMP(3);
+ALTER TABLE "Document" ADD COLUMN     "acknowledgedAt" TIMESTAMP(3),
+ADD COLUMN     "specSections" TEXT[] DEFAULT ARRAY[]::TEXT[];
 
 -- AlterTable
 ALTER TABLE "ProductionRate" ADD COLUMN     "calibratedAt" TIMESTAMP(3),
@@ -143,10 +144,11 @@ CREATE TABLE "EarthworkCalc" (
     "id" TEXT NOT NULL,
     "companyId" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
-    "existingId" TEXT NOT NULL,
-    "proposedId" TEXT NOT NULL,
-    "gridFt" DOUBLE PRECISION NOT NULL,
-    "areaSf" DOUBLE PRECISION NOT NULL,
+    "source" TEXT NOT NULL DEFAULT 'LANDXML',
+    "existingId" TEXT,
+    "proposedId" TEXT,
+    "gridFt" DOUBLE PRECISION,
+    "areaSf" DOUBLE PRECISION,
     "cutCy" DOUBLE PRECISION NOT NULL,
     "fillCy" DOUBLE PRECISION NOT NULL,
     "soilTypeId" TEXT,
@@ -155,6 +157,7 @@ CREATE TABLE "EarthworkCalc" (
     "exportLooseCy" DOUBLE PRECISION,
     "importBankCy" DOUBLE PRECISION,
     "note" TEXT,
+    "preview" JSONB,
     "createdById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -336,6 +339,23 @@ CREATE TABLE "ScopePackage" (
     CONSTRAINT "ScopePackage_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "ImportDraft" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "kind" TEXT NOT NULL,
+    "filename" TEXT NOT NULL,
+    "storageKey" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PROCESSING',
+    "statusDetail" TEXT,
+    "meta" JSONB,
+    "rows" JSONB NOT NULL DEFAULT '[]',
+    "createdById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ImportDraft_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "EmailMessage_companyId_rfqId_idx" ON "EmailMessage"("companyId", "rfqId");
 
@@ -383,6 +403,9 @@ CREATE INDEX "CalibrationSuggestion_companyId_idx" ON "CalibrationSuggestion"("c
 
 -- CreateIndex
 CREATE INDEX "ScopePackage_companyId_projectId_idx" ON "ScopePackage"("companyId", "projectId");
+
+-- CreateIndex
+CREATE INDEX "ImportDraft_companyId_idx" ON "ImportDraft"("companyId");
 
 
 -- Product renamed: the platform sending method is now called PLATFORM.

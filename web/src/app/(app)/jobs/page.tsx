@@ -19,8 +19,8 @@ export default async function PastJobs() {
   return (
     <>
       <PageHeader title="Past jobs" subtitle={<>Teach {PRODUCT_NAME} from jobs you&apos;ve finished. Upload job cost reports (or type them in), check every line, and map activities to your production rates. {PRODUCT_NAME} then suggests rate changes; nothing changes until you approve it.</>} />
-      <div className="grid gap-6 xl:grid-cols-[1fr_24rem]">
-        <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-6">
           <Card title={<>Calibration suggestions {sugs.length > 0 && <span className="flag flag-warn ml-1">{sugs.length}</span>}</>} actions={<RecalcButton />}>
             {sugs.length === 0 ? <p className="text-sm text-muted">No suggestions right now. They appear when a reviewed past job has lines mapped to a production rate and its real output differs by more than 3%.</p> : (
               <ul className="space-y-3">{sugs.map((s) => {
@@ -37,7 +37,7 @@ export default async function PastJobs() {
           </Card>
           <Card title="Jobs">
             {jobs.length === 0 ? <EmptyState title="No past jobs yet" body="Add a finished job to start. Upload its final job cost report and, if you have it, the original bid estimate. You can also close out a bid you built here from its Overview page." /> : (
-              <table className="tbl">
+              <div className="overflow-x-auto"><table className="tbl">
                 <thead><tr><th>Job</th><th>Type</th><th>Completed</th><th className="text-right">Lines</th><th className="text-right">To review</th><th>Status</th></tr></thead>
                 <tbody>{jobs.map((j) => (
                   <tr key={j.id}>
@@ -49,7 +49,7 @@ export default async function PastJobs() {
                     <td>{j.status === "REVIEWED" ? <span className="flag flag-ok">Reviewed</span> : <span className="flag flag-muted">In review</span>}</td>
                   </tr>))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </Card>
         </div>

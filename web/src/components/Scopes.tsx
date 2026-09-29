@@ -13,7 +13,7 @@ type Sub = { id: string; name: string; categories: string[]; email: string | nul
 export function ScopeEditor({ projectId, bidItems, trades, scope, onDone }: { projectId: string; bidItems: BidItem[]; trades: { code: string; name: string }[]; scope?: Scope; onDone?: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [s, setS] = useState<Omit<Scope, "id">>(scope ?? { name: "", trade: trades[0]?.name ?? null, description: "", lines: [] });
+  const [s, setS] = useState<Omit<Scope, "id">>(scope ?? { name: "", trade: null, description: "", lines: [] });
   const [err, setErr] = useState("");
   const has = (id: string) => s.lines.some((l) => l.bidItemId === id);
   const toggle = (b: BidItem) => setS({ ...s, lines: has(b.id) ? s.lines.filter((l) => l.bidItemId !== b.id) : [...s.lines, { bidItemId: b.id, itemNumber: b.itemNumber, description: b.description, quantity: b.quantity, unit: b.unit, note: null }] });

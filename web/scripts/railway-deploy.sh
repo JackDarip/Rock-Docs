@@ -6,6 +6,9 @@
 #   ANTHROPIC_API_KEY     enables AI reading of bid schedules and supplier quotes
 #   SEED_ADMIN_PASSWORD   first admin's password (10+ characters)
 # Optional:
+#   RESEND_API_KEY, MAIL_FROM_DOMAIN   send RFQs from the app (otherwise they're logged, not delivered)
+#   GOOGLE_CLIENT_ID/SECRET, MICROSOFT_CLIENT_ID/SECRET   "Connect my email"
+#   CLAMAV_HOST           clamd host:port for upload virus scanning
 #   SEED_ADMIN_EMAIL      first admin's email (default admin@interstaterock.com)
 #   PLATFORM_ADMIN_EMAILS who can open /platform to add tenants
 #   CUSTOM_DOMAIN         default interstaterock.theanswerai.com
@@ -62,6 +65,17 @@ $RAILWAY variable set "SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:-admin@interstaterock
 [ -n "${PLATFORM_ADMIN_EMAILS:-}" ] && $RAILWAY variable set "PLATFORM_ADMIN_EMAILS=$PLATFORM_ADMIN_EMAILS" --service "$SERVICE" --skip-deploys --json >/dev/null
 printf '%s' "$ANTHROPIC_API_KEY" | $RAILWAY variable set ANTHROPIC_API_KEY --stdin --service "$SERVICE" --skip-deploys --json >/dev/null
 printf '%s' "$SEED_ADMIN_PASSWORD" | $RAILWAY variable set SEED_ADMIN_PASSWORD --stdin --service "$SERVICE" --skip-deploys --json >/dev/null
+# Encrypts connected-mailbox tokens; generated once and kept.
+if ! $RAILWAY variable list --service "$SERVICE" --json 2>/dev/null | grep -q '"APP_SECRET"'; then
+  head -c 48 /dev/urandom | base64 | tr -d '\n/+=' | $RAILWAY variable set APP_SECRET --stdin --service "$SERVICE" --skip-deploys --json >/dev/null
+fi
+for v in RESEND_API_KEY GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_SECRET; do
+  [ -n "${!v:-}" ] && printf '%s' "${!v}" | $RAILWAY variable set "$v" --stdin --service "$SERVICE" --skip-deploys --json >/dev/null
+done
+for v in MAIL_FROM_DOMAIN GOOGLE_CLIENT_ID MICROSOFT_CLIENT_ID CLAMAV_HOST OAUTH_REDIRECT_BASE; do
+  [ -n "${!v:-}" ] && $RAILWAY variable set "$v=${!v}" --service "$SERVICE" --skip-deploys --json >/dev/null
+done
+$RAILWAY variable set TZ=America/Denver --service "$SERVICE" --skip-deploys --json >/dev/null
 echo "Variables set."
 
 step "Storage volume for uploaded plans and quotes (/data)"
