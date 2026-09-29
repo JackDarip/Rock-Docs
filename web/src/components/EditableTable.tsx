@@ -95,6 +95,10 @@ export function EditableTable({
     setRows((rs) => [...rs, blank]);
   };
 
+  const minW = (c: Column) =>
+    c.width?.endsWith("px") ? parseInt(c.width, 10) : c.type === "checkbox" ? 64 : c.type === "readonly" ? 90 : c.type === "number" || c.type === "money" || c.type === "pct" ? 104
+      : c.type === "date" ? 150 : c.type === "select" ? 160 : c.type === "list" ? 200 : c.required ? 170 : 150;
+
   const input = (row: Row, c: Column) => {
     const v = row[c.key];
     const common = { disabled: readOnly, onBlur: () => commit(row._key), className: "cell-input", placeholder: c.placeholder, "aria-label": c.label };
@@ -138,14 +142,14 @@ export function EditableTable({
           <thead>
             <tr>
               {columns.map((c) => (
-                <th key={c.key} style={{ width: c.width }}>
+                <th key={c.key} style={{ width: c.width, minWidth: minW(c) }}>
                   {c.term && GLOSSARY[c.term] ? (
                     <span className="term" tabIndex={0}>{c.label}<span className="term-tip">{GLOSSARY[c.term]}</span></span>
                   ) : c.label}
                   {c.required && <span className="text-brand"> *</span>}
                 </th>
               ))}
-              <th style={{ width: 150 }} />
+              <th style={{ width: 150, minWidth: 120 }}><span className="sr-only">Row status and actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -161,7 +165,7 @@ export function EditableTable({
                     {flagged && <span className="flag flag-warn mr-1">⚠ {flagRow!.label}</span>}
                     <span className={status[row._key]?.startsWith("⚠") ? "text-warn" : "text-ok"}>{status[row._key]}</span>
                     {!readOnly && (
-                      <button type="button" onClick={() => remove(row._key)} className="ml-2 text-faint hover:text-danger" aria-label="Delete row">✕</button>
+                      <button type="button" onClick={() => remove(row._key)} className="ml-2 rounded px-1.5 py-0.5 text-faint hover:bg-red-50 hover:text-danger" aria-label="Delete row" title="Delete row">✕</button>
                     )}
                   </td>
                 </tr>

@@ -1,6 +1,7 @@
 import { requireCtx } from "@/lib/auth";
 import { loadEstimate } from "@/lib/estimate";
 import { Card, fmtMoney } from "@/components/ui";
+import { Icon } from "@/components/Icon";
 
 export default async function Output({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -44,7 +45,7 @@ export default async function Output({ params }: { params: Promise<{ id: string 
             <p className="mt-1 flex-1 text-sm text-muted">{it.body}</p>
             {it.final && !ready ? (
               <button className="btn btn-secondary mt-3" disabled title="Resolve the open bid items first">Blocked: open items</button>
-            ) : <a className="btn btn-primary mt-3 justify-center" href={link(it.kind)}>⬇ Download</a>}
+            ) : <a className="btn btn-primary mt-3 justify-center" href={link(it.kind)}><Icon name="download" size={16} />Download</a>}
           </div>
         ))}
       </div>

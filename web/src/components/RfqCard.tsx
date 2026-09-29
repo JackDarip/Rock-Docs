@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { markSent, setRecipientStatus } from "@/app/actions/rfq";
+import { Icon } from "@/components/Icon";
 
 type Supplier = { id: string; name: string; email: string | null; categories: string[]; preferred: boolean; serviceArea: string | null };
 type Recipient = { id: string; name: string; email: string | null; method: string; status: string; sentAt: string; token: string; supplierId: string | null };
@@ -46,7 +47,7 @@ export function RfqCard(props: {
           <div className="text-sm text-muted">Revision {rfq.revision} · {rfq.lineCount} lines</div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a className="btn btn-primary" href={dl("xlsx")}>⬇ Download Excel</a>
+          <a className="btn btn-primary" href={dl("xlsx")}><Icon name="download" size={16} />Download Excel</a>
           <a className="btn btn-secondary" href={dl("pdf")}>PDF</a>
           <a className="btn btn-secondary" href={dl("csv")}>CSV</a>
         </div>
@@ -68,7 +69,7 @@ export function RfqCard(props: {
             <div className="mt-3">
               <div className="label">Per-supplier copies (name pre-filled so returns match automatically)</div>
               <div className="flex flex-wrap gap-1">
-                {suggested.map((s) => <a key={s.id} className="rounded-full border border-line px-2 py-0.5 text-xs hover:border-brand" href={dl("xlsx", s.id)}>⬇ {s.name}{s.preferred ? " ★" : ""}</a>)}
+                {suggested.map((s) => <a key={s.id} className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-xs hover:border-brand" href={dl("xlsx", s.id)}><Icon name="download" size={13} />{s.name}{s.preferred ? " ★" : ""}</a>)}
               </div>
             </div>
           )}

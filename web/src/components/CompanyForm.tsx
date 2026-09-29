@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateCompany, uploadLogo } from "@/app/actions/setup";
 import { GLOSSARY } from "@/config/glossary";
+import { FilePicker } from "./FilePicker";
 
 type C = Record<string, any>;
 
@@ -72,8 +73,8 @@ export function CompanyForm({ company, readOnly }: { company: C; readOnly: boole
           <div>
             <label className="label">Logo</label>
             <form action={async (fd) => { const r = await uploadLogo(fd); setLogoMsg(r.ok ? "Uploaded ✓ (refresh to see it)" : `⚠ ${r.error}`); }}>
-              <input type="file" name="logo" accept="image/png,image/jpeg" disabled={readOnly} className="text-sm" />
-              <button className="btn btn-secondary btn-sm mt-2" disabled={readOnly}>Upload logo</button>
+              <FilePicker name="logo" accept="image/png,image/jpeg" disabled={readOnly} label="Choose image" />
+              <button className="btn btn-primary btn-sm mt-2" disabled={readOnly}>Upload logo</button>
             </form>
             {logoMsg && <p className="mt-1 text-xs text-muted">{logoMsg}</p>}
           </div>

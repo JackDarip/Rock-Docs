@@ -20,10 +20,13 @@ export function MappingControls({ projectId, mappingId, qtyFactor, confirmed, ai
   const [f, setF] = useState(qtyFactor);
   const [, start] = useTransition();
   return (
-    <span className="flex items-center gap-2 text-xs">
+    <span className="flex shrink-0 items-center gap-2 text-xs">
       {!confirmed && <><span className="flag flag-warn">{aiSuggested ? "Suggested" : "Unconfirmed"}</span><button className="btn btn-primary btn-sm" onClick={() => start(async () => { await updateMapping(projectId, mappingId, { confirmed: true }); router.refresh(); })}>Confirm</button></>}
-      <label title="Multiply the bid item quantity (e.g. 1.0 = same quantity; 0.5 = half of it uses this assembly)">× <input className="cell-input w-16 text-right" type="number" step="any" value={f} onChange={(e) => setF(Number(e.target.value))} onBlur={() => f !== qtyFactor && start(async () => { await updateMapping(projectId, mappingId, { qtyFactor: f || 1 }); router.refresh(); })} /></label>
-      <button className="text-faint hover:text-danger" title="Remove mapping" onClick={() => start(async () => { await removeMapping(projectId, mappingId); router.refresh(); })}>✕</button>
+      <label className="inline-flex items-center gap-1 whitespace-nowrap text-muted" title="Share of the bid item quantity this assembly covers (1 = all of it)">
+        Qty factor
+        <input className="input w-16 px-2 py-1 text-right" type="number" step="any" value={f} onChange={(e) => setF(Number(e.target.value))} onBlur={() => f !== qtyFactor && start(async () => { await updateMapping(projectId, mappingId, { qtyFactor: f || 1 }); router.refresh(); })} />
+      </label>
+      <button className="rounded px-1.5 py-0.5 text-faint hover:bg-red-50 hover:text-danger" title="Remove this assembly from the bid item" aria-label="Remove mapping" onClick={() => start(async () => { await removeMapping(projectId, mappingId); router.refresh(); })}>Remove</button>
     </span>
   );
 }

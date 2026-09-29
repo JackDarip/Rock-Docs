@@ -26,11 +26,12 @@ export default async function SuppliersStep({ searchParams }: { searchParams: Pr
           emptyHint={`No ${noun}s yet. Add them one at a time, or import a CSV/Excel file (columns: Company, Categories, Contact, Email, Phone, Service area, Preferred, Notes).`}
           columns={[
             { key: "name", label: "Company", required: true, width: "22%" },
-            { key: "categories", label: `Categories (codes: ${cats.map((c) => c.code).join(", ")})`, type: "list", width: "24%" },
+            { key: "categories", label: "Categories", type: "list", width: "24%", placeholder: cats.slice(0, 3).map((c) => c.code).join(", ") },
             { key: "serviceArea", label: "Service area" },
             { key: "preferred", label: "Preferred", type: "checkbox" },
             { key: "notes", label: "Notes" },
           ]} />
+        <p className="mt-2 text-xs text-muted">Categories use the short codes from the Categories list below: {cats.map((c) => `${c.code} (${c.name})`).join(", ")}. Separate several with commas.</p>
       </Card>
       <Card title="Contacts" className="mb-6">
         <EditableTable key={`c-${kind}`} entity="contact" readOnly={!isAdmin} rows={contacts.filter((c) => supIds.has(c.supplierId))} addLabel="Add contact"

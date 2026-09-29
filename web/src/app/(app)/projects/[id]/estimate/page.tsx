@@ -5,12 +5,12 @@ import type { ValueStatus } from "@/lib/calc";
 import { Card, EmptyState, ButtonLink, Flag, Term, fmtMoney, fmtNum, fmtDateTime } from "@/components/ui";
 import { AddMapping, MappingControls, OverridePanel, SaveVersion, SuggestButton } from "@/components/EstimateControls";
 
-const STATUS: Record<ValueStatus, { label: string; tone: "ok" | "info" | "warn" | "muted"; color: string }> = {
-  CALIBRATED: { label: "Calibrated", tone: "ok", color: "#047857" },
-  QUOTED: { label: "Supplier quote", tone: "ok", color: "#059669" },
-  VERIFIED: { label: "Verified company value", tone: "info", color: "#234478" },
-  OVERRIDE: { label: "Job override", tone: "info", color: "#FF8A33" },
-  UNVERIFIED: { label: "Unverified", tone: "warn", color: "#F59E0B" },
+const STATUS: Record<ValueStatus, { label: string; short: string; tone: "ok" | "info" | "warn" | "muted"; color: string }> = {
+  CALIBRATED: { label: "Calibrated", short: "Calibrated", tone: "ok", color: "#047857" },
+  QUOTED: { label: "Supplier quote", short: "Quoted", tone: "ok", color: "#059669" },
+  VERIFIED: { label: "Verified company value", short: "Verified", tone: "info", color: "#234478" },
+  OVERRIDE: { label: "Job override", short: "Override", tone: "info", color: "#FF8A33" },
+  UNVERIFIED: { label: "Unverified", short: "Unverified", tone: "warn", color: "#F59E0B" },
 };
 const DEFAULT_SECTIONS = ["Project Setup", "Earthwork", "Wet Utilities", "Paving & Concrete", "Structures", "Indirect Costs"];
 
@@ -40,8 +40,8 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
 
   let lastSection = "";
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-      <div className="space-y-4">
+    <div className="est-layout">
+      <div className="est-main space-y-4">
         {drift && (
           <div className="rounded-xl border border-warn-line bg-warn-bg p-3 text-sm text-warn">
             ⚠ This estimate has changed since version {latest.version} was saved ({fmtDateTime(latest.createdAt)}): was {fmtMoney(latest.total)}, now {fmtMoney(t.total)}. Company setup, quotes, or quantities changed. The saved version keeps its original values; save a new version to lock in the recalculation.
@@ -79,31 +79,34 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
                   </div>
                 </div>
                 {s.lines.length > 0 && (
-                  <table className="tbl mt-3">
-                    <thead><tr><th>Assembly</th><th className="text-right">Qty</th><th className="text-right">Labor</th><th className="text-right">Equip.</th><th className="text-right">Materials</th><th className="text-right">Total</th><th>Basis</th><th /></tr></thead>
+                  <div className="mt-3 overflow-x-auto">
+                  <table className="tbl">
+                    <thead><tr><th>Assembly</th><th className="text-right">Qty</th><th className="text-right">Labor</th><th className="text-right">Equip.</th><th className="text-right">Materials</th><th className="text-right">Total</th><th>Basis</th></tr></thead>
                     <tbody>
                       {s.lines.map((l) => {
                         const m = maps.find((x) => x.id === l.mappingId)!;
                         return (
                           <Fragment key={l.mappingId}>
                             <tr className={l.status === "UNVERIFIED" ? "row-warn" : ""}>
-                              <td className="font-semibold">{l.assemblyName}</td>
-                              <td className="text-right">{fmtNum(l.qty, 2)} {l.unit}</td>
-                              <td className="text-right">{fmtMoney(l.labor)}</td>
-                              <td className="text-right">{fmtMoney(l.equipment)}</td>
-                              <td className="text-right">{fmtMoney(l.material)}</td>
-                              <td className="text-right font-semibold">{fmtMoney(l.total)}</td>
-                              <td><Flag tone={STATUS[l.status].tone}>{STATUS[l.status].label}</Flag></td>
-                              <td>{m && <MappingControls projectId={id} mappingId={m.id} qtyFactor={m.qtyFactor} confirmed={m.confirmed} aiSuggested={m.aiSuggested} />}</td>
+                              <td className="min-w-[160px] font-semibold">{l.assemblyName}</td>
+                              <td className="whitespace-nowrap text-right">{fmtNum(l.qty, 2)} {l.unit}</td>
+                              <td className="whitespace-nowrap text-right tabular-nums">{fmtMoney(l.labor)}</td>
+                              <td className="whitespace-nowrap text-right tabular-nums">{fmtMoney(l.equipment)}</td>
+                              <td className="whitespace-nowrap text-right tabular-nums">{fmtMoney(l.material)}</td>
+                              <td className="whitespace-nowrap text-right font-semibold tabular-nums">{fmtMoney(l.total)}</td>
+                              <td className="whitespace-nowrap"><Flag tone={STATUS[l.status].tone} title={STATUS[l.status].label}>{STATUS[l.status].short}</Flag></td>
                             </tr>
                             <tr>
-                              <td colSpan={8} className="pt-0">
-                                <details className="text-xs">
+                              <td colSpan={7} className="pt-0">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                <details className="min-w-0 flex-1 text-xs">
                                   <summary className="cursor-pointer text-navy-700">How was this calculated?</summary>
                                   <ul className="mt-1 max-w-4xl space-y-0.5 whitespace-pre-wrap text-muted">{l.explain.map((e, i) => <li key={i}>{e}</li>)}</ul>
                                   {l.issues.length > 0 && <ul className="mt-1 text-warn">{l.issues.map((x, i) => <li key={i}>⚠ {x}</li>)}</ul>}
                                   {s.bidItem.documentId && <a className="mt-1 inline-block text-navy-700 underline" href={`/projects/${id}/viewer?doc=${s.bidItem.documentId}&page=${(s.bidItem.pageIndex ?? 0) + 1}`}>Open the source sheet</a>}
                                 </details>
+                                {m && <MappingControls projectId={id} mappingId={m.id} qtyFactor={m.qtyFactor} confirmed={m.confirmed} aiSuggested={m.aiSuggested} />}
+                                </div>
                               </td>
                             </tr>
                           </Fragment>
@@ -111,6 +114,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
                       })}
                     </tbody>
                   </table>
+                  </div>
                 )}
                 <div className="mt-3"><AddMapping projectId={id} bidItemId={s.bidItem.id} assemblies={setup.assemblies.map((a) => ({ id: a.id, name: a.name, unit: a.unit }))} /></div>
               </section>
@@ -119,7 +123,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
         })}
       </div>
 
-      <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+      <aside className="est-summary" aria-label="Estimate summary">
         <Card>
           <div className="text-xs font-semibold uppercase tracking-wide text-muted"><Term k="confidence">Confidence</Term></div>
           <div className="font-display text-4xl font-bold">{result.confidence.pctTrusted}%</div>
@@ -142,8 +146,10 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
               <tr className="border-t-2 border-night"><td className="pt-2 font-display text-xl font-bold">Total bid</td><td className="pt-2 text-right font-display text-xl font-bold">{fmtMoney(t.total)}</td></tr>
             </tbody>
           </table>
-          <p className="mt-2 text-xs text-muted">Change markup, overhead, tax and bond for this job on the Overview tab.</p>
+          <p className="mt-2 text-xs text-muted">Change markup, overhead, tax and bond for this job on the bid&apos;s Overview page.</p>
         </Card>
+      </aside>
+      <aside className="est-tools" aria-label="Overrides and versions">
         <Card title={<Term k="override">Job overrides</Term>}>
           <OverridePanel projectId={id} targets={targets} overrides={overrides.map((o) => ({ targetType: o.targetType, targetId: o.targetId, field: o.field, value: o.value, reason: o.reason }))} />
         </Card>

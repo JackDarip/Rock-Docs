@@ -8,6 +8,7 @@ import { buildContext, crewCost, unitsPerHour, type CrewT, type EquipmentT, type
 type Rate = ProductionRateT & { notes: string | null };
 
 const UNITS = ["CY", "LF", "SY", "SF", "TON", "EA", "LS", "AC"];
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export function ProductionEditor({ rates, laborRoles, equipment, readOnly }: { rates: Rate[]; laborRoles: LaborRoleT[]; equipment: EquipmentT[]; readOnly: boolean }) {
   const [editing, setEditing] = useState<Rate | null>(null);
@@ -29,7 +30,7 @@ export function ProductionEditor({ rates, laborRoles, equipment, readOnly }: { r
                 <div className="font-semibold">{r.activity}</div>
                 {(c.issues.length > 0 || !r.verified) && <span className="flag flag-warn">⚠ Check</span>}
               </div>
-              <div className="text-sm text-muted">{r.outputPerDay ?? "?"} {r.unit}/day · {r.crew.labor.reduce((s, x) => s + x.count, 0)} people · {r.crew.equipment.reduce((s, x) => s + x.count, 0)} machines</div>
+              <div className="text-sm text-muted">{r.outputPerDay ?? "?"} {r.unit}/day · {plural(r.crew.labor.reduce((s, x) => s + x.count, 0), "person", "people")} · {plural(r.crew.equipment.reduce((s, x) => s + x.count, 0), "machine", "machines")}</div>
               <div className="mt-1 text-sm font-semibold text-navy-700">{per != null ? `$${per.toFixed(2)} per ${r.unit} labor + equipment` : "Needs a daily output"}</div>
             </button>
           );

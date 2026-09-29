@@ -6,6 +6,7 @@ import { categoryNames, fillTemplate, rfqLines } from "@/lib/rfqdata";
 import { EmptyState, ButtonLink, fmtDateTime } from "@/components/ui";
 import { GenerateRfqs } from "@/components/RebuildButton";
 import { RfqCard } from "@/components/RfqCard";
+import { Icon } from "@/components/Icon";
 
 export default async function Rfqs({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,9 +40,9 @@ export default async function Rfqs({ params }: { params: Promise<{ id: string }>
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="max-w-3xl text-sm text-muted">One RFQ per supplier category plus a combined master. Every RFQ has a unique number that&apos;s in the file name, the spreadsheet, and the email subject, so returned files match the right job, category and revision automatically.</p>
-        <div className="flex gap-2"><GenerateRfqs projectId={id} />{rfqs.length > 0 && <a className="btn btn-secondary btn-sm" href={`/api/projects/${id}/rfqs-zip`}>⬇ Download all (.zip)</a>}</div>
+        <div className="flex gap-2"><GenerateRfqs projectId={id} />{rfqs.length > 0 && <a className="btn btn-secondary btn-sm" href={`/api/projects/${id}/rfqs-zip`}><Icon name="download" size={15} />Download all (.zip)</a>}</div>
       </div>
-      {!project.quoteDueAt && <div className="rounded-lg border border-mist bg-white p-2 text-sm text-muted">Tip: set &quot;Supplier quotes due&quot; on the Overview tab so it prints on every RFQ.</div>}
+      {!project.quoteDueAt && <div className="rounded-lg border border-mist bg-white p-2 text-sm text-muted">Tip: set &quot;Supplier quotes due&quot; on the bid&apos;s Overview page so it prints on every RFQ.</div>}
       {waiting.length > 0 && (
         <div className="rounded-xl border border-warn-line bg-warn-bg p-3 text-sm text-warn">
           {waiting.map((r) => {

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireCtx } from "@/lib/auth";
-import { ProjectTabs } from "@/components/ProjectTabs";
+import { ProjectTabs, SectionCrumb } from "@/components/ProjectTabs";
 import { fmtDateTime } from "@/components/ui";
 
 export default async function ProjectLayout({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
@@ -16,11 +16,12 @@ export default async function ProjectLayout({ children, params }: { children: Re
   return (
     <>
       <div className="mb-4">
-        <div className="text-xs font-semibold uppercase tracking-wider text-brand">Job {p.jobNumber}{p.owner ? ` · ${p.owner}` : ""}</div>
-        <h1 className="text-3xl font-bold text-night">{p.name}</h1>
-        <div className="text-sm text-muted">Bid due {fmtDateTime(p.bidDueAt)} · {p.laborMode === "PREVAILING" ? "Prevailing wage" : "Open shop"}</div>
+        <SectionCrumb id={id} jobNumber={p.jobNumber} />
+        <h1 className="mt-1 text-3xl font-bold text-night">{p.name}</h1>
+        <div className="text-sm text-muted">{p.bidDueAt ? `Bid due ${fmtDateTime(p.bidDueAt)}` : "Bid due date not set"}{p.owner ? ` · ${p.owner}` : ""} · {p.laborMode === "PREVAILING" ? "Prevailing wage" : "Open shop"}</div>
       </div>
-      <ProjectTabs id={id} badges={{ review: drafts, estimate: unmapped, quotes: quotesToReview }} />
+      <div className="mb-6 border-b border-line" />
+      <ProjectTabs id={id} name={p.name} badges={{ review: drafts, estimate: unmapped, quotes: quotesToReview }} />
       {children}
     </>
   );

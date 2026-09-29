@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { calibrateSheet, deleteMarkup, saveMarkup } from "@/app/actions/project";
 import { GLOSSARY } from "@/config/glossary";
+import { Icon } from "./Icon";
 
 type Pt = [number, number];
 type Markup = { id: string; documentId: string; pageIndex: number; bidItemId: string | null; tool: string; points: Pt[]; quantity: number; unit: string; color: string; label: string | null };
@@ -185,18 +186,19 @@ export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, ma
   const pageList = Array.from({ length: numPages }, (_, i) => ({ i, s: sheets.find((x) => x.pageIndex === i) }))
     .filter(({ i, s }) => !q || `${i + 1} ${s?.sheetNumber ?? ""} ${s?.title ?? ""}`.toLowerCase().includes(q.toLowerCase()));
 
-  const TOOLS: { k: Tool; label: string; tip: string }[] = [
-    { k: "pan", label: "✋ Pan", tip: "Scroll and look around" },
-    { k: "calibrate", label: "📏 Calibrate", tip: GLOSSARY.calibrate },
-    { k: "LINEAR", label: "Linear", tip: "Click two points" },
-    { k: "POLYLINE", label: "Polyline", tip: "Click points, then Enter or double-click to finish" },
-    { k: "AREA", label: "Area", tip: "Click the outline, then Enter or double-click to close" },
-    { k: "COUNT", label: "Count", tip: "Click each item" },
+  const TOOLS: { k: Tool; label: string; icon: string; tip: string }[] = [
+    { k: "pan", label: "Pan", icon: "pan", tip: "Scroll and look around" },
+    { k: "calibrate", label: "Calibrate", icon: "ruler", tip: GLOSSARY.calibrate },
+    { k: "LINEAR", label: "Linear", icon: "line", tip: "Click two points" },
+    { k: "POLYLINE", label: "Polyline", icon: "polyline", tip: "Click points, then Enter or double-click to finish" },
+    { k: "AREA", label: "Area", icon: "area", tip: "Click the outline, then Enter or double-click to close" },
+    { k: "COUNT", label: "Count", icon: "count", tip: "Click each item" },
   ];
+  const PANE_H = "h-[calc(100vh-190px)] min-h-[520px]";
 
   return (
-    <div className="grid h-[calc(100vh-220px)] min-h-[560px] grid-cols-[200px_minmax(0,1fr)_280px] gap-3">
-      <aside className="flex min-h-0 flex-col rounded-xl border border-line bg-white">
+    <div className="grid grid-cols-[180px_minmax(0,1fr)] gap-3 2xl:grid-cols-[200px_minmax(0,1fr)_280px]">
+      <aside className={`flex min-h-0 flex-col rounded-xl border border-line bg-white ${PANE_H}`} aria-label="Sheets">
         <div className="border-b border-line p-2"><input className="input" placeholder="Sheet # or title" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <ul className="min-h-0 flex-1 overflow-auto text-sm">
           {pageList.map(({ i, s }) => (
@@ -210,22 +212,24 @@ export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, ma
         </ul>
       </aside>
 
-      <section className="flex min-h-0 flex-col rounded-xl border border-line bg-white">
-        <div className="flex flex-wrap items-center gap-1 border-b border-line p-2">
-          {TOOLS.map((t) => (
-            <button key={t.k} title={t.tip} onClick={() => { setTool(t.k); setDraft([]); }} className={`btn btn-sm ${tool === t.k ? "btn-primary" : "btn-secondary"}`}>{t.label}</button>
-          ))}
-          <span className="mx-2 h-6 w-px bg-line" />
-          <button className="btn btn-secondary btn-sm" onClick={() => setZoom((z) => Math.max(0.25, z / 1.25))}>−</button>
-          <span className="w-12 text-center text-xs">{Math.round(zoom * 100)}%</span>
-          <button className="btn btn-secondary btn-sm" onClick={() => setZoom((z) => Math.min(8, z * 1.25))}>+</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => wrapRef.current && size.w && setZoom((wrapRef.current.clientWidth - 20) / size.w)}>Fit</button>
-          <span className="ml-auto text-xs">
-            {fpu ? <span className="flag flag-ok">Calibrated · 1 unit = {(fpu * 72).toFixed(1)} ft/in</span> : <span className="flag flag-warn">⚠ Not calibrated</span>}
-            {sheet?.scaleText && <span className="ml-2 text-muted">Stated scale {sheet.scaleText}</span>}
-          </span>
+      <section className={`flex min-h-0 flex-col rounded-xl border border-line bg-white ${PANE_H}`} aria-label="Plan sheet">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line p-2" role="toolbar" aria-label="Takeoff tools">
+          <div className="inline-flex overflow-hidden rounded-lg border border-line">
+            {TOOLS.map((t, i) => (
+              <button key={t.k} type="button" title={t.tip} aria-pressed={tool === t.k} onClick={() => { setTool(t.k); setDraft([]); }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold transition ${i ? "border-l border-line" : ""} ${tool === t.k ? "bg-brand text-white" : "bg-white text-ink hover:bg-paper"}`}>
+                <Icon name={t.icon} size={15} />{t.label}
+              </button>
+            ))}
+          </div>
+          <div className="inline-flex items-center overflow-hidden rounded-lg border border-line bg-white">
+            <button type="button" className="px-2 py-1.5 hover:bg-paper" title="Zoom out" aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(0.25, z / 1.25))}><Icon name="zoomOut" size={16} /></button>
+            <span className="w-12 border-x border-line py-1.5 text-center text-xs font-semibold tabular-nums">{Math.round(zoom * 100)}%</span>
+            <button type="button" className="px-2 py-1.5 hover:bg-paper" title="Zoom in" aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(8, z * 1.25))}><Icon name="zoomIn" size={16} /></button>
+            <button type="button" className="border-l border-line px-2 py-1.5 hover:bg-paper" title="Fit to width" aria-label="Fit to width" onClick={() => wrapRef.current && size.w && setZoom((wrapRef.current.clientWidth - 20) / size.w)}><Icon name="fit" size={16} /></button>
+          </div>
         </div>
-        {notice && <div className="flex items-start justify-between gap-2 border-b border-warn-line bg-warn-bg px-3 py-1.5 text-sm text-warn"><span>{notice}</span><button onClick={() => setNotice("")}>✕</button></div>}
+        {notice && <div className="flex items-start justify-between gap-2 border-b border-warn-line bg-warn-bg px-3 py-1.5 text-sm text-warn"><span>{notice}</span><button type="button" aria-label="Dismiss" onClick={() => setNotice("")}>✕</button></div>}
         <div ref={wrapRef} className="relative min-h-0 flex-1 overflow-auto bg-slate-200"
           onWheel={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom((z) => Math.min(8, Math.max(0.25, z * (e.deltaY < 0 ? 1.1 : 0.9)))); } }}>
           {err && <p className="p-6 text-warn">⚠ {err}</p>}
@@ -249,14 +253,17 @@ export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, ma
             </svg>
           </div>
         </div>
-        <div className="flex items-center justify-between border-t border-line p-2 text-sm">
+        <div className="flex items-center justify-between gap-3 border-t border-line p-2 text-sm">
           <button className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Prev</button>
-          <span>Page {page} of {numPages || "…"}{sheet?.sheetNumber ? ` · Sheet ${sheet.sheetNumber}` : ""}{sheet?.title ? ` · ${sheet.title}` : ""}</span>
+          <span className="flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+            <span className="truncate">Page {page} of {numPages || "…"}{sheet?.sheetNumber ? ` · Sheet ${sheet.sheetNumber}` : ""}{sheet?.title ? ` · ${sheet.title}` : ""}</span>
+            {fpu ? <span className="flag flag-ok" title={sheet?.scaleText ? `Stated scale ${sheet.scaleText}` : undefined}>Calibrated · 1 in = {(fpu * 72).toFixed(1)} ft</span> : <span className="flag flag-warn">Not calibrated</span>}
+          </span>
           <button className="btn btn-secondary btn-sm" disabled={page >= numPages} onClick={() => setPage(page + 1)}>Next →</button>
         </div>
       </section>
 
-      <aside className="flex min-h-0 flex-col gap-3 overflow-auto">
+      <aside className="col-span-2 grid content-start gap-3 md:grid-cols-3 2xl:col-span-1 2xl:flex 2xl:h-[calc(100vh-190px)] 2xl:min-h-[520px] 2xl:flex-col 2xl:overflow-auto" aria-label="Takeoff details">
         <div className="rounded-xl border border-line bg-white p-3">
           <label className="label">Measuring for bid item</label>
           <select className="input" value={bidItemId} onChange={(e) => setBidItemId(e.target.value)}>
@@ -277,7 +284,7 @@ export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, ma
               })}
             </ul>
           )}
-          <p className="mt-2 text-xs text-muted">Apply these to bid items on the Bid items tab.</p>
+          <p className="mt-2 text-xs text-muted">Apply these to bid items under Bid items &amp; takeoff.</p>
         </div>
         <div className="min-h-0 rounded-xl border border-line bg-white p-3">
           <div className="label">Markups on this sheet</div>

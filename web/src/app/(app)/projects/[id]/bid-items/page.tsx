@@ -21,7 +21,7 @@ export default async function BidItems({ params }: { params: Promise<{ id: strin
       <Card title={<>Owner&apos;s <Term k="biditem">bid items</Term></>} actions={<ButtonLink href={`/projects/${id}/viewer`} variant="secondary">Open plan viewer</ButtonLink>}>
         <p className="mb-3 text-sm text-muted">
           Three ways in: extract from the bid schedule PDF (Plan room → Extract bid schedule), import an Excel/CSV bid form, or type them in.
-          When there&apos;s an owner schedule, your estimate is organized by these items so the bid maps 1:1 to the bid form. New and imported items are drafts until confirmed on the Review tab.
+          When there&apos;s an owner schedule, your estimate is organized by these items so the bid maps 1:1 to the bid form. New and imported items are drafts until confirmed under Review.
         </p>
         <div className="mb-4"><BidScheduleImport projectId={id} /></div>
         <EditableTable entity="bidItem" projectId={id} rows={items} addLabel="Add bid item" defaults={{ source: "MANUAL" }}

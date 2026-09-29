@@ -6,7 +6,7 @@ import { SetupProgress } from "@/components/SetupProgress";
 import { TAGLINE } from "@/config/brand";
 
 export default async function Dashboard() {
-  const { db, company, user } = await requireCtx();
+  const { db, company } = await requireCtx();
   const [status, projects, drafts] = await Promise.all([
     setupStatus(db, company),
     db.project.findMany({ orderBy: { bidDueAt: "asc" }, where: { status: "BIDDING" }, take: 12 }),
@@ -14,7 +14,7 @@ export default async function Dashboard() {
   ]);
   return (
     <>
-      <PageHeader eyebrow={company.name} title={`Welcome back, ${user.name.split(" ")[0]}`} subtitle={TAGLINE}
+      <PageHeader eyebrow={company.name} title="Dashboard" subtitle={TAGLINE}
         actions={<ButtonLink href="/projects/new">+ New bid</ButtonLink>} />
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <Stat label="Setup completeness" value={`${status.score}%`} hint={status.score < 100 ? "Estimates flag any line that relies on missing setup values." : "All setup steps have data."} />

@@ -55,10 +55,10 @@ export default async function Documents({ params }: { params: Promise<{ id: stri
                     <div className="mt-0.5 text-muted">{d.statusDetail}</div>
                   </td>
                   <td className="text-xs text-muted">{fmtDateTime(d.createdAt)}</td>
-                  <td className="space-y-1 text-right">
+                  <td className="space-y-1 whitespace-nowrap text-right">
                     {d.mime === "application/pdf" && d.status === "READY" && <Link className="btn btn-secondary btn-sm" href={`/projects/${id}/viewer?doc=${d.id}`}>Open sheets</Link>}
                     {d.mime === "application/pdf" && d.status === "READY" && (d.kind === "BID_SCHEDULE" || d.kind === "PLANS" || d.kind === "ADDENDUM") && <div className="relative inline-block"><ExtractSchedule id={d.id} pageCount={d.pageCount} /></div>}
-                    {d.kind === "QUOTE" && <div><Link className="text-xs text-navy-700 hover:underline" href={`/projects/${id}/quotes`}>Supplier quote? Upload it on Quotes →</Link></div>}
+                    {d.kind === "QUOTE" && <div><Link className="whitespace-nowrap text-xs text-navy-700 hover:underline" href={`/projects/${id}/quotes`}>Add it under Quotes →</Link></div>}
                     <div><DeleteDoc id={d.id} name={d.filename} /></div>
                   </td>
                 </tr>

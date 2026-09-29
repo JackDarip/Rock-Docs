@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { importSuppliers } from "@/app/actions/setup";
+import { FilePicker } from "./FilePicker";
 
 export function ImportForm({ kind }: { kind: string }) {
   const [msg, setMsg] = useState("");
@@ -14,7 +15,7 @@ export function ImportForm({ kind }: { kind: string }) {
       router.refresh();
     }}>
       <input type="hidden" name="kind" value={kind} />
-      <input type="file" name="file" accept=".csv,.xlsx" className="max-w-52 text-xs" required />
+      <FilePicker name="file" accept=".csv,.xlsx" required label="Choose CSV/Excel" />
       <button className="btn btn-secondary btn-sm">Bulk import</button>
       {msg && <span className="text-xs text-muted">{msg}</span>}
     </form>

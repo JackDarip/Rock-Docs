@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function SetupProgress({ steps }: { steps: { key: string; label: string; href: string; done: boolean; skipped: boolean; blurb?: string }[] }) {
   return (
-    <ol className="grid gap-2 sm:grid-cols-3 lg:grid-cols-9">
+    <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5 min-[1600px]:grid-cols-9">
       {steps.map((s, i) => (
         <li key={s.key}>
           <Link href={s.href} className={`block rounded-xl border p-3 text-sm transition hover:border-brand ${s.done ? "border-emerald-200 bg-ok-bg" : s.skipped ? "border-line bg-paper" : "border-line bg-white"}`}>

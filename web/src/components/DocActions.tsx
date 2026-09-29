@@ -16,7 +16,7 @@ export function DocKind({ id, kind, confirmed, suggested, addendumNumber }: { id
   const save = (nk: string, num?: number | null) => start(async () => { await setDocumentKind(id, nk, num); router.refresh(); });
   return (
     <div className="flex items-center gap-1">
-      <select className="cell-input" value={k} onChange={(e) => { setK(e.target.value); save(e.target.value, n === "" ? null : Number(n)); }}>
+      <select className="cell-input min-w-[170px]" value={k} onChange={(e) => { setK(e.target.value); save(e.target.value, n === "" ? null : Number(n)); }}>
         {DOC_KINDS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
       {k === "ADDENDUM" && <input className="cell-input w-14" placeholder="#" value={n} onChange={(e) => setN(e.target.value)} onBlur={() => save(k, n === "" ? null : Number(n))} />}

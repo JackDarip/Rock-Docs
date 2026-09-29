@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { importBidSchedule } from "@/app/actions/project";
+import { FilePicker } from "./FilePicker";
 
 export function BidScheduleImport({ projectId }: { projectId: string }) {
   const [msg, setMsg] = useState("");
@@ -13,7 +14,7 @@ export function BidScheduleImport({ projectId }: { projectId: string }) {
       setMsg(r.ok ? `Imported ${r.count} bid items as drafts. Review them next.` : `⚠ ${r.error}`);
       router.refresh();
     }}>
-      <input type="file" name="file" accept=".xlsx,.csv" required className="text-sm" />
+      <FilePicker name="file" accept=".xlsx,.csv" required label="Choose Excel/CSV" />
       <button className="btn btn-secondary btn-sm">Import Excel / CSV bid schedule</button>
       {msg && <span className="text-sm text-muted">{msg}</span>}
     </form>
