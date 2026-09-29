@@ -1,6 +1,6 @@
 # Client overview: source
 
-Source for `InterstateRockDocs-Client-Overview.pdf` (repo root), the client-facing "Capabilities & Client Inputs" document.
+Source for `RockDocs-Client-Overview.pdf` (repo root), the client-facing "Capabilities & Client Inputs" document.
 
 ## Edit
 

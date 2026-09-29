@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
 
 // ---------------------------------------------------------------- config
 const CONFIG = {
-  PRODUCT_NAME: 'InterstateRockDocs',
+  PRODUCT_NAME: 'RockDocs',
   TAGLINE: 'Estimates calibrated to your real costs.',
   DOC_TITLE: 'Capabilities & Client Inputs',
   CLIENT_NAME: 'Interstate Rock',
