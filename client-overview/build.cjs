@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
 
 // ---------------------------------------------------------------- config
 const CONFIG = {
-  PRODUCT_NAME: 'Rock Docs',
+  PRODUCT_NAME: 'InterstateRockDocs',
   TAGLINE: 'Estimates calibrated to your real costs.',
   DOC_TITLE: 'Capabilities & Client Inputs',
   CLIENT_NAME: 'Interstate Rock',
@@ -78,8 +78,8 @@ function makeContourSVG(w, h, seed) {
     }
   }
   return `<svg class="contours" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-    <path d="${minor.join('')}" fill="none" stroke="#3E8E94" stroke-opacity=".38" stroke-width=".9" stroke-linecap="round"/>
-    <path d="${major.join('')}" fill="none" stroke="#6FC0C6" stroke-opacity=".62" stroke-width="1.7" stroke-linecap="round"/>
+    <path d="${minor.join('')}" fill="none" stroke="#FF6B00" stroke-opacity=".3" stroke-width=".9" stroke-linecap="round"/>
+    <path d="${major.join('')}" fill="none" stroke="#FF7A1A" stroke-opacity=".62" stroke-width="1.7" stroke-linecap="round"/>
   </svg>`;
 }
 

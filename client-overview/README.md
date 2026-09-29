@@ -1,12 +1,12 @@
 # Client overview: source
 
-Source for `Rock-Docs-Client-Overview.pdf` (repo root), the client-facing "Capabilities & Client Inputs" document.
+Source for `InterstateRockDocs-Client-Overview.pdf` (repo root), the client-facing "Capabilities & Client Inputs" document.
 
 ## Edit
 
 - **Copy and layout:** `template.html`
 - **Names, client, date, workspace URL, contact line:** the `CONFIG` block at the top of `build.cjs`. The template uses `{{PLACEHOLDERS}}` for these, so the product name is never hardcoded.
-- **Fonts:** `fonts/` (Inter and Fraunces, both SIL Open Font License; licenses included).
+- **Fonts:** `fonts/` (Inter and Barlow Condensed, both SIL Open Font License; licenses included). Brand colors follow theanswerai.com: navy `#06122B` and orange `#FF6B00`.
 
 ## Rebuild
 
