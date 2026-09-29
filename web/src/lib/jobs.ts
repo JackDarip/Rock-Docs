@@ -3,6 +3,8 @@ import { storage } from "./storage";
 import { readPdfPages, suggestDocKind } from "./pdftext";
 import { extractBidSchedule, extractSupplierQuote, slicePdf } from "./ai";
 import { similarity } from "./rfq";
+import { bbox, packTin, parseLandXml } from "./landxml";
+import { newKey } from "./storage";
 import { deliver } from "./mail";
 import { afterDelivery, sweepReminders } from "./rfqsend";
 
@@ -57,10 +59,32 @@ async function processDocument(companyId: string, jobId: string, p: { documentId
           : `${pageCount - textPages} of ${pageCount} pages are scanned`,
       },
     });
+  } else if (/\.(xml|landxml)$/i.test(doc.filename)) {
+    const xml = (await storage.get(companyId, doc.storageKey)).toString("utf8");
+    const tins = /<LandXML\b/i.test(xml) ? parseLandXml(xml) : [];
+    await db.surface.deleteMany({ where: { documentId: doc.id } });
+    for (const t of tins) {
+      const key = newKey(companyId, `projects/${doc.projectId}/surfaces`, `${t.name}.tin`);
+      await storage.put(companyId, key, packTin(t));
+      const guessProposed = /\b(fg|finish|final|design|prop|proposed|sg|subgrade)\b/i.test(t.name);
+      await db.surface.create({
+        data: {
+          projectId: doc.projectId, documentId: doc.id, name: t.name, role: guessProposed ? "PROPOSED" : "EXISTING",
+          pointCount: t.points.length / 3, faceCount: t.faces.length / 3, units: t.units, bbox: bbox(t) as any, dataKey: key,
+        } as any,
+      });
+    }
+    await db.document.update({
+      where: { id: doc.id },
+      data: {
+        status: "READY", suggestedKind: "CAD", kind: doc.kindConfirmed ? doc.kind : "CAD",
+        statusDetail: tins.length ? `LandXML: ${tins.length} surface${tins.length === 1 ? "" : "s"} (${tins.map((t) => t.name).join(", ")}). Compare them on the Earthwork page.` : /<LandXML\b/i.test(xml) ? "LandXML file with no TIN surfaces" : "Stored",
+      },
+    });
   } else {
     await db.document.update({
       where: { id: doc.id },
-      data: { status: "READY", suggestedKind: suggestDocKind(doc.filename, "", null), statusDetail: "Stored" },
+      data: { status: "READY", suggestedKind: suggestDocKind(doc.filename, "", null), statusDetail: "Stored for reference" },
     });
   }
 }

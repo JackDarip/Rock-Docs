@@ -702,10 +702,11 @@ model EarthworkCalc {
   id            String   @id @default(cuid())
   companyId     String
   projectId     String
-  existingId    String
-  proposedId    String
-  gridFt        Float
-  areaSf        Float
+  source        String   @default("LANDXML") // LANDXML | MANUAL
+  existingId    String?
+  proposedId    String?
+  gridFt        Float?
+  areaSf        Float?
   cutCy         Float // bank (in-place) cubic yards
   fillCy        Float // compacted cubic yards
   soilTypeId    String?
@@ -714,6 +715,7 @@ model EarthworkCalc {
   exportLooseCy Float? // surplus hauled off, loose
   importBankCy  Float? // borrow needed, bank measure
   note          String?
+  preview       Json? // downsampled cut/fill grid for the map {w,h,cells:[...]}
   createdById   String?
   createdAt     DateTime @default(now())
 

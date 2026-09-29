@@ -10,6 +10,7 @@ function sections(id: string, badges: Record<string, number> = {}) {
     { href: base, label: "Overview" },
     { href: `${base}/documents`, label: "Plan room" },
     { href: `${base}/bid-items`, label: "Bid items & takeoff", also: `${base}/viewer` },
+    { href: `${base}/earthwork`, label: "Earthwork" },
     { href: `${base}/review`, label: "Review", badge: badges.review },
     { href: `${base}/estimate`, label: "Estimate", badge: badges.estimate },
     { href: `${base}/materials`, label: "Material list" },
