@@ -1,6 +1,6 @@
 # Client overview: source
 
-Source for `TrueGrade-Client-Overview.pdf` (repo root), the client-facing "Capabilities & Client Inputs" document.
+Source for `Rock-Docs-Client-Overview.pdf` (repo root), the client-facing "Capabilities & Client Inputs" document.
 
 ## Edit
 
@@ -21,5 +21,5 @@ The PDF is written to the repo root. `out/overview.html` is a generated preview 
 
 ## Notes
 
-- Source of truth for capabilities is `truegrade-build-prompt_1.txt`. If the build spec changes, update the template to match.
+- Source of truth for capabilities is `truegrade-build-prompt_1.txt` (the build spec still uses its original working name; the client document uses `PRODUCT_NAME` from `build.cjs`). If the build spec changes, update the template to match.
 - The document deliberately contains no pricing, dates, or performance claims. Add those once they are decided.

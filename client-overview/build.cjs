@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
 
 // ---------------------------------------------------------------- config
 const CONFIG = {
-  PRODUCT_NAME: 'TrueGrade',
+  PRODUCT_NAME: 'Rock Docs',
   TAGLINE: 'Estimates calibrated to your real costs.',
   DOC_TITLE: 'Capabilities & Client Inputs',
   CLIENT_NAME: 'Interstate Rock',
@@ -22,7 +22,7 @@ const CONFIG = {
   CONTACT_LINE: 'theanswerai.com',
   DATE: 'September 2026',
 };
-const OUTPUT_PDF = path.join(__dirname, '..', `${CONFIG.PRODUCT_NAME}-Client-Overview.pdf`);
+const OUTPUT_PDF = path.join(__dirname, '..', `${CONFIG.PRODUCT_NAME.replace(/\s+/g, '-')}-Client-Overview.pdf`);
 
 // ---------------------------------------------------------------- topographic contour art (cover)
 function makeContourSVG(w, h, seed) {
