@@ -9,8 +9,8 @@
 #   RESEND_API_KEY, MAIL_FROM_DOMAIN   send RFQs from the app (otherwise they're logged, not delivered)
 #   GOOGLE_CLIENT_ID/SECRET, MICROSOFT_CLIENT_ID/SECRET   "Connect my email"
 #   CLAMAV_HOST           clamd host:port for upload virus scanning
-#   SEED_ADMIN_EMAIL      first admin's email (default admin@interstaterock.com)
-#   PLATFORM_ADMIN_EMAILS who can open /platform to add tenants
+#   SEED_ADMIN_EMAIL      first admin's email (default jack@theanswerai.com)
+#   PLATFORM_ADMIN_EMAILS who can open /platform to add tenants (default jack@theanswerai.com)
 #   CUSTOM_DOMAIN         default interstaterock.theanswerai.com
 #   PROJECT_NAME          default rockitdocs
 #
@@ -61,8 +61,8 @@ step "Variables (secrets are piped, never echoed)"
 $RAILWAY variable set 'DATABASE_URL=${{Postgres.DATABASE_URL}}' --service "$SERVICE" --skip-deploys --json >/dev/null
 $RAILWAY variable set ROOT_DOMAIN=theanswerai.com DEV_TENANT=interstaterock STORAGE_DIR=/data/storage NODE_ENV=production \
   --service "$SERVICE" --skip-deploys --json >/dev/null
-$RAILWAY variable set "SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:-admin@interstaterock.com}" --service "$SERVICE" --skip-deploys --json >/dev/null
-[ -n "${PLATFORM_ADMIN_EMAILS:-}" ] && $RAILWAY variable set "PLATFORM_ADMIN_EMAILS=$PLATFORM_ADMIN_EMAILS" --service "$SERVICE" --skip-deploys --json >/dev/null
+$RAILWAY variable set "SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:-jack@theanswerai.com}" --service "$SERVICE" --skip-deploys --json >/dev/null
+$RAILWAY variable set "PLATFORM_ADMIN_EMAILS=${PLATFORM_ADMIN_EMAILS:-jack@theanswerai.com}" --service "$SERVICE" --skip-deploys --json >/dev/null
 printf '%s' "$ANTHROPIC_API_KEY" | $RAILWAY variable set ANTHROPIC_API_KEY --stdin --service "$SERVICE" --skip-deploys --json >/dev/null
 printf '%s' "$SEED_ADMIN_PASSWORD" | $RAILWAY variable set SEED_ADMIN_PASSWORD --stdin --service "$SERVICE" --skip-deploys --json >/dev/null
 # Encrypts connected-mailbox tokens; generated once and kept.
@@ -96,4 +96,4 @@ $RAILWAY domain "$CUSTOM_DOMAIN" --service "$SERVICE" --port 3000 || true
 
 step "Done"
 echo "Sign in at https://$CUSTOM_DOMAIN (after DNS) or the railway.app address above,"
-echo "as ${SEED_ADMIN_EMAIL:-admin@interstaterock.com} with the SEED_ADMIN_PASSWORD you set. Change it after first sign-in."
+echo "as ${SEED_ADMIN_EMAIL:-jack@theanswerai.com} with the SEED_ADMIN_PASSWORD you set. Change it after first sign-in."
