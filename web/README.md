@@ -59,18 +59,25 @@ A `Dockerfile` is included.
 
 ### Launch on Railway (recommended)
 
-`railway.json` is already set up to build the Dockerfile and health-check `/api/health`.
+`railway.json` builds the Dockerfile and health-checks `/api/health`. On every boot the container
+applies migrations and, the first time only, creates Interstate Rock and its first admin (it refuses to
+create one without a real `SEED_ADMIN_PASSWORD`).
 
-1. Create a Railway project and pick **Deploy from GitHub repo**, choosing `JackDarip/Rock-Docs` with root directory `web`.
-2. Add a **PostgreSQL** database to the project. Railway fills in `DATABASE_URL` for you.
-3. Add a **Volume** to the web service, mounted at `/data` (uploaded plans and quotes live there).
-4. Set these variables on the web service:
-   `ROOT_DOMAIN=theanswerai.com`, `DEV_TENANT=interstaterock`, `ANTHROPIC_API_KEY=…`,
-   `PLATFORM_ADMIN_EMAILS=<your email>`, `SEED_ADMIN_EMAIL=…`, `SEED_ADMIN_PASSWORD=<strong password>`.
-5. Deploy. Migrations run on startup. Then run the seed once from the service shell: `npm run db:seed`.
-6. Under **Settings → Networking**, add the custom domain `interstaterock.theanswerai.com`, then add the
-   CNAME record Railway shows you at your DNS host for theanswerai.com (Hostinger).
-7. Sign in, change the admin password, and complete Company Setup.
+**One command** (from the `web/` folder, with `RAILWAY_API_TOKEN`, `ANTHROPIC_API_KEY` and
+`SEED_ADMIN_PASSWORD` set as environment variables):
+
+```bash
+bash scripts/railway-deploy.sh
+```
+
+It creates the project, Postgres, the web service, variables (secrets are piped, never echoed), a volume
+at `/data`, deploys, and prints the DNS record to add at Hostinger for `interstaterock.theanswerai.com`.
+It is safe to re-run.
+
+**By hand in the Railway dashboard:** create a project from the GitHub repo with root directory `web`, add
+PostgreSQL, add a volume at `/data`, set `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `ROOT_DOMAIN=theanswerai.com`,
+`DEV_TENANT=interstaterock`, `ANTHROPIC_API_KEY`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, then add the custom
+domain under Settings → Networking and the CNAME it shows at your DNS host.
 
 ## What's built (by the spec's phases)
 
