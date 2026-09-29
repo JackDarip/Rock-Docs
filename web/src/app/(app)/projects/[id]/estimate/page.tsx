@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { requireCtx } from "@/lib/auth";
 import { loadEstimate } from "@/lib/estimate";
 import type { ValueStatus } from "@/lib/calc";
@@ -84,24 +85,28 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
                       {s.lines.map((l) => {
                         const m = maps.find((x) => x.id === l.mappingId)!;
                         return (
-                          <tr key={l.mappingId} className={l.status === "UNVERIFIED" ? "row-warn" : ""}>
-                            <td>
-                              <div className="font-semibold">{l.assemblyName}</div>
-                              <details className="text-xs">
-                                <summary className="cursor-pointer text-navy-700">How was this calculated?</summary>
-                                <ul className="mt-1 space-y-0.5 whitespace-pre-wrap text-muted">{l.explain.map((e, i) => <li key={i}>{e}</li>)}</ul>
-                                {l.issues.length > 0 && <ul className="mt-1 text-warn">{l.issues.map((x, i) => <li key={i}>⚠ {x}</li>)}</ul>}
-                                {s.bidItem.documentId && <a className="mt-1 inline-block text-navy-700 underline" href={`/projects/${id}/viewer?doc=${s.bidItem.documentId}&page=${(s.bidItem.pageIndex ?? 0) + 1}`}>Open the source sheet</a>}
-                              </details>
-                            </td>
-                            <td className="text-right">{fmtNum(l.qty, 2)} {l.unit}</td>
-                            <td className="text-right">{fmtMoney(l.labor)}</td>
-                            <td className="text-right">{fmtMoney(l.equipment)}</td>
-                            <td className="text-right">{fmtMoney(l.material)}</td>
-                            <td className="text-right font-semibold">{fmtMoney(l.total)}</td>
-                            <td><Flag tone={STATUS[l.status].tone}>{STATUS[l.status].label}</Flag></td>
-                            <td>{m && <MappingControls projectId={id} mappingId={m.id} qtyFactor={m.qtyFactor} confirmed={m.confirmed} aiSuggested={m.aiSuggested} />}</td>
-                          </tr>
+                          <Fragment key={l.mappingId}>
+                            <tr className={l.status === "UNVERIFIED" ? "row-warn" : ""}>
+                              <td className="font-semibold">{l.assemblyName}</td>
+                              <td className="text-right">{fmtNum(l.qty, 2)} {l.unit}</td>
+                              <td className="text-right">{fmtMoney(l.labor)}</td>
+                              <td className="text-right">{fmtMoney(l.equipment)}</td>
+                              <td className="text-right">{fmtMoney(l.material)}</td>
+                              <td className="text-right font-semibold">{fmtMoney(l.total)}</td>
+                              <td><Flag tone={STATUS[l.status].tone}>{STATUS[l.status].label}</Flag></td>
+                              <td>{m && <MappingControls projectId={id} mappingId={m.id} qtyFactor={m.qtyFactor} confirmed={m.confirmed} aiSuggested={m.aiSuggested} />}</td>
+                            </tr>
+                            <tr>
+                              <td colSpan={8} className="pt-0">
+                                <details className="text-xs">
+                                  <summary className="cursor-pointer text-navy-700">How was this calculated?</summary>
+                                  <ul className="mt-1 max-w-4xl space-y-0.5 whitespace-pre-wrap text-muted">{l.explain.map((e, i) => <li key={i}>{e}</li>)}</ul>
+                                  {l.issues.length > 0 && <ul className="mt-1 text-warn">{l.issues.map((x, i) => <li key={i}>⚠ {x}</li>)}</ul>}
+                                  {s.bidItem.documentId && <a className="mt-1 inline-block text-navy-700 underline" href={`/projects/${id}/viewer?doc=${s.bidItem.documentId}&page=${(s.bidItem.pageIndex ?? 0) + 1}`}>Open the source sheet</a>}
+                                </details>
+                              </td>
+                            </tr>
+                          </Fragment>
                         );
                       })}
                     </tbody>
