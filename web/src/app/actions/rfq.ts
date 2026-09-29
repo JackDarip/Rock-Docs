@@ -246,3 +246,22 @@ export async function approvePriceUpdates(projectId: string) {
   revalidatePath(`/projects/${projectId}`, "layout");
   return n;
 }
+
+/** A quote that arrived as email text: pasted or forwarded. Saved as a source document, read by AI, then reviewed like any other. */
+export async function pasteQuoteText(projectId: string, text: string, supplierId: string | null) {
+  const { db, company, user } = await project(projectId);
+  const body = z.string().trim().min(20, "Paste the whole email, including prices").max(200_000).safeParse(text);
+  if (!body.success) return { ok: false as const, error: body.error.issues[0].message };
+  if (!aiEnabled()) return { ok: false as const, error: "AI reading isn't switched on for this server. Enter the quote by hand from the Compare page instead." };
+  try { await assertAiBudget(company.id, estimateAiCost(2).usd); } catch (e: any) { return { ok: false as const, error: e.message }; }
+  const sup = supplierId ? await db.supplier.findUnique({ where: { id: supplierId } }) : null;
+  const name = `Email quote${sup ? ` - ${sup.name}` : ""} ${new Date().toISOString().slice(0, 10)}.txt`;
+  const key = newKey(company.id, `projects/${projectId}/quotes`, name);
+  const buf = Buffer.from(body.data, "utf8");
+  await putScanned(company.id, key, buf);
+  const doc = await db.document.create({ data: { projectId, filename: name, storageKey: key, size: buf.length, mime: "text/plain", kind: "QUOTE", kindConfirmed: true, status: "READY", uploadedById: user.id } as any });
+  const quote = await db.quote.create({ data: { projectId, supplierId: sup?.id ?? null, supplierName: sup?.name ?? null, source: "EMAIL", documentId: doc.id } as any });
+  await enqueue(company.id, "EXTRACT_QUOTE", { documentId: doc.id, quoteId: quote.id });
+  revalidatePath(`/projects/${projectId}/quotes`);
+  return { ok: true as const };
+}

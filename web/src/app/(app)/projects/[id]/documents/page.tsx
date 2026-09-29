@@ -68,7 +68,7 @@ export default async function Documents({ params }: { params: Promise<{ id: stri
           </table>
         )}
         {addenda.length > 0 && (
-          <p className="mt-3 text-sm text-muted">Addenda: {addenda.map((a) => `#${a.addendumNumber ?? "?"} ${a.acknowledged ? "✓ acknowledged" : "not yet acknowledged"}`).join(" · ")}. Automatic before/after diffing of addenda is on the roadmap; for now, update affected bid items and regenerate RFQs (they revise automatically).</p>
+          <p className="mt-3 text-sm text-muted">Addenda: {addenda.map((a) => `#${a.addendumNumber ?? "?"} ${a.acknowledged ? "✓ acknowledged" : "not yet acknowledged"}`).join(" · ")}. <Link className="font-semibold text-navy-700 hover:underline" href={`/projects/${id}/addenda`}>See what changed and accept it →</Link></p>
         )}
       </Card>
       {planDocs.length > 0 && (

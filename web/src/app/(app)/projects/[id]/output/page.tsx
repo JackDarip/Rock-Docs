@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireCtx } from "@/lib/auth";
 import { loadEstimate } from "@/lib/estimate";
 import { Card, fmtMoney } from "@/components/ui";
@@ -49,7 +50,7 @@ export default async function Output({ params }: { params: Promise<{ id: string 
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted">Close-out (entering actual job costs to calibrate future estimates) and historical job import are the next build phases.</p>
+      <p className="text-xs text-muted">After the job: <Link className="font-semibold text-navy-700 hover:underline" href={`/projects/${id}`}>close it out</Link> from the Overview to enter actual costs and calibrate future estimates.</p>
     </div>
   );
 }

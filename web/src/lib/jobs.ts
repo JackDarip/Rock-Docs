@@ -1,7 +1,7 @@
 import { prisma, tenantDb } from "./db";
 import { storage } from "./storage";
 import { readPdfPages, suggestDocKind } from "./pdftext";
-import { extractBidSchedule, extractSupplierQuote, slicePdf } from "./ai";
+import { extractBidSchedule, extractSupplierQuote, extractQuoteFromText, slicePdf } from "./ai";
 import { similarity } from "./rfq";
 import { bbox, packTin, parseLandXml } from "./landxml";
 import { diffSchedule } from "./addenda";
@@ -266,7 +266,10 @@ async function extractQuote(companyId: string, p: { documentId: string; quoteId:
   const doc = await db.document.findUnique({ where: { id: p.documentId } });
   const quote = await db.quote.findUnique({ where: { id: p.quoteId } });
   if (!doc || !quote) return;
-  const res = await extractSupplierQuote(companyId, await storage.get(companyId, doc.storageKey), quote.id);
+  const raw = await storage.get(companyId, doc.storageKey);
+  const res = doc.mime.startsWith("text/") || /\.(txt|eml)$/i.test(doc.filename)
+    ? await extractQuoteFromText(companyId, raw.toString("utf8").slice(0, 200_000), quote.id)
+    : await extractSupplierQuote(companyId, raw, quote.id);
   const toDate = (s: string | null) => (s && !isNaN(Date.parse(s)) ? new Date(s) : null);
   const supplier = res.supplier_name
     ? (await db.supplier.findMany({ where: { kind: "SUPPLIER" } })).find((s) => similarity(s.name, res.supplier_name!) > 0.6)
