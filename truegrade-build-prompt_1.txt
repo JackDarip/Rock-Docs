@@ -1,0 +1,419 @@
+Build a multi-tenant heavy civil / sitework construction estimating web app 
+called TrueGrade.
+
+END-TO-END WORKFLOW (the whole product exists to deliver this):
+1. A company sets up its own costs once (labor, equipment, materials, 
+   suppliers, production rates) and can refine them anytime.
+2. For each bid, an estimator uploads the plan set and bid documents issued 
+   by the owner (federal, state DOT, county/city, or private developer).
+3. TrueGrade reads the documents, extracts quantities, and builds a draft 
+   quantity takeoff. The estimator reviews and corrects it against the 
+   plan sheets.
+4. Confirmed quantities flow into the estimate, which calculates labor, 
+   equipment, and materials from the company's own data.
+5. TrueGrade generates a consolidated material list and creates 
+   supplier-ready RFQ spreadsheets, grouped by supplier category.
+6. The estimator either sends RFQs from inside the app OR downloads them and 
+   sends them from their own email to anyone they choose. Either way, 
+   supplier prices come back (filled spreadsheet, online form, or the 
+   supplier's own PDF quote) and populate the estimate after review.
+7. The app produces the final bid documents. After the job, actual costs 
+   feed back to calibrate future estimates.
+
+BRANDING (single source of truth):
+- Define PRODUCT_NAME = "TrueGrade" in ONE config file. Use it for every page 
+  title, header, email, PDF footer, spreadsheet header, and UI string. Never 
+  hardcode the name anywhere else.
+- Tagline (config value): "Estimates calibrated to your real costs."
+- Initial deployment: interstaterock.theanswerai.com (tenant #1: Interstate 
+  Rock). Architect so additional contractors can be added as separate 
+  tenants on their own subdomains with no schema changes.
+- White-label: each company sets its own logo and accent color. On estimate 
+  PDFs and RFQ spreadsheets, their branding leads and "Powered by TrueGrade" 
+  appears small in the footer.
+
+CORE PHILOSOPHY (READ FIRST):
+- NO pre-installed rate data, NO hardcoded production rates, NO seeded price 
+  database. The app ships as an empty, guided shell. Every number that feeds 
+  an estimate is entered, uploaded, or confirmed by the company using it.
+- AI ASSISTS, HUMANS VERIFY. Every AI-extracted quantity, material, or price 
+  is a draft until a human confirms it. Nothing flows into an estimate 
+  silently.
+- EVERYTHING IS TRACEABLE. Every quantity links to the document, sheet, and 
+  location it came from. Every price shows its source and date.
+- Users are estimators bidding earthwork, utilities, paving, and structures 
+  (bridges) on government, state, and commercial jobs. Precision beats speed. 
+  If the numbers don't match reality, they will stop using the tool.
+
+MULTI-TENANCY (applies everywhere):
+- Every table and every stored file scoped by company_id; enforce at the 
+  query layer and storage layer, not just the UI
+- Roles: Admin (setup, rates, approvals, supplier directory, email settings) 
+  and Estimator (builds estimates, sends and exports RFQs)
+- Subdomain routing per company
+- No cross-tenant data leakage, ever. Automated tests must attempt 
+  cross-tenant reads of records AND uploaded files AND RFQ download links 
+  and confirm they fail.
+
+===== PART 1: COMPANY SETUP WIZARD ("Make It Yours") =====
+
+Runs on first login and stays permanently accessible from the main nav as 
+"Company Setup." Every step is skippable, saveable mid-way, and re-editable. 
+Show a progress indicator and a "setup completeness" score. Any estimate 
+built on incomplete setup visibly flags which line items rely on 
+unverified values.
+
+1. COMPANY BASICS
+   Name, logo, accent color, default markup %, overhead allocation %, sales 
+   tax rate, project types bid (Gov/State/Commercial), bonding/insurance 
+   cost approach, default RFQ email subject line, message body, and 
+   signature.
+
+2. LABOR
+   - Roles (operator, laborer, foreman, flagger, pipe layer, etc.) with base 
+     wage, burden %, and a separate prevailing wage / Davis-Bacon rate
+   - Prevailing wage per county/project via a simple table, or upload the 
+     wage determination PDF for AI extraction with review
+
+3. EQUIPMENT
+   - Each machine: name, type, hourly ownership cost, hourly operating cost, 
+     standby rate, mobilization cost per move
+   - Option to upload an equipment cost report for AI extraction with review
+
+4. MATERIALS & SUPPLIERS
+   - Materials: name, unit, unit cost, supplier, date last quoted, density 
+     (tons/CY) where relevant, waste/overage %, spec notes
+   - Quote-expiry warnings for materials not updated within a user-set 
+     number of days
+   - SUPPLIER DIRECTORY: supplier company, contacts, emails, phones, 
+     categories supplied (aggregates, pipe & precast, asphalt, ready-mix 
+     concrete, rebar & steel, geotextiles & erosion control, fittings & 
+     valves, trucking, equipment rental, plus custom categories), service 
+     area, preferred flag, notes. Bulk import from CSV/Excel.
+   - Subcontractor directory with the same structure (striping, fencing, 
+     electrical, traffic control, etc.)
+
+5. PRODUCTION RATES
+   - For each activity, the user enters real-world crew production and picks 
+     the equipment and labor roles that make up the crew
+   - Ask in plain language ("How many cubic yards can your crew place and 
+     compact in one 8-hour day?") and convert internally. The user never 
+     needs to know the formula.
+   - Rates can be overridden per job later
+
+6. SOIL & MATERIAL BEHAVIOR
+   - Editable table of soil types with swell % and shrink %, plain-language 
+     explanations, custom soil types, and a before/after volume visual
+
+7. ASSEMBLIES (pre-built work packages)
+   - Guided builder: name an assembly (e.g., "8-inch sewer, 8 ft deep"), pick 
+     materials (with quantity per unit of assembly), crew, equipment, and 
+     production rate from setup data. Live cost per unit with breakdown. 
+     Duplicate and edit freely.
+   - Assemblies are what convert takeoff quantities into material lists, so 
+     material quantity per unit must be explicit (e.g., per LF of pipe: 
+     1.05 LF pipe, X CY bedding, X CY backfill).
+
+8. EMAIL SENDING (optional; the app works fully without completing this)
+   Offer three ways to send RFQs from inside the app. Explain each in plain 
+   language with pros and cons, and let the Admin pick a company default:
+   a) TRUEGRADE SENDING (default, works immediately, no setup): emails sent 
+      from the platform's authenticated domain, display name 
+      "[Company Name] via TrueGrade", reply-to set to the sending estimator.
+   b) COMPANY DOMAIN: emails sent from the company's own address (e.g., 
+      bids@theircompany.com). Show the exact SPF, DKIM, and DMARC DNS records 
+      to add, with copy buttons, a "send these instructions to my IT / web 
+      person" button, and a live "Verify" check. Until verified, fall back to 
+      option (a) automatically and say so.
+   c) CONNECT MY EMAIL: each estimator connects their own Google or Microsoft 
+      account via OAuth. RFQs send from their real mailbox and appear in 
+      their Sent folder. Respect provider daily sending limits and warn 
+      before hitting them.
+
+===== PART 2: PLAN ROOM & TAKEOFF ("Upload the Bid Package") =====
+
+A. UPLOAD
+- Each estimate has a Bid Package. Users upload: plan set (PDF, often 
+  20-500+ sheets and 50-500 MB), bid schedule / bid form (PDF or Excel), 
+  specifications and special provisions, geotechnical report, addenda, and 
+  optional CAD exchange files (LandXML surfaces, DXF/DWG stored for 
+  reference, CSV point files).
+- Chunked, resumable uploads. Processing runs as background jobs with a 
+  progress indicator; the user can keep working while it processes.
+- Auto-suggest document type tags; user confirms.
+- Capture: owner, owner type (Federal / State DOT / County-City / Private), 
+  project number, location, bid due date and time, pre-bid meeting.
+
+B. SHEET INDEX
+- Split the plan set into sheets. Extract title block data (sheet number, 
+  title, discipline) into a searchable index with thumbnails.
+- Classify sheets: cover, general notes, quantity summary, grading, utility 
+  plan & profile, paving, structures, details, traffic control, erosion 
+  control, cross sections. User can correct classifications.
+- Detect vector vs. scanned PDFs. Use embedded text and vector data where 
+  available; use OCR/vision only when needed.
+- Run heavy AI vision only on sheets relevant to takeoff. Before full 
+  analysis, show estimated processing time and cost. Admin sets per-tenant 
+  processing limits.
+
+C. QUANTITY EXTRACTION (three sources, ranked by reliability; every quantity 
+   records its source)
+1. BID SCHEDULE (most reliable): Extract the owner's bid item schedule into 
+   an editable table: item number, description, spec section reference, 
+   unit, quantity. When a bid schedule exists, the estimate is organized by 
+   these bid items so the final bid maps 1:1 to the owner's bid form.
+2. TABULATED DATA ON PLANS: Extract quantity summary sheets, pipe schedules, 
+   structure/manhole tables, curb/sidewalk tables, and earthwork summary 
+   tables, each with its sheet reference.
+3. AI-ASSISTED MEASUREMENT (least reliable, always flagged amber): Suggest 
+   pipe run lengths by size and material from plan & profile sheets, counts 
+   of structures (manholes, inlets, valves, hydrants), and paved areas by 
+   section type. Show suggestions as overlays on the sheet with 
+   Accept / Edit / Reject.
+- EARTHWORK VOLUMES: Do NOT compute cut/fill from PDF contours with AI. 
+  Accept earthwork quantities only from (a) the owner's bid schedule or 
+  earthwork summary, (b) imported LandXML existing and proposed surfaces, 
+  compared to compute cut/fill, or (c) manual entry from an external 
+  earthwork takeoff, with a source note. Apply the company's swell/shrink 
+  factors from Setup.
+
+D. TAKEOFF WORKSPACE (manual tools, always available)
+- Plan viewer: zoom, pan, sheet navigation, search by sheet number or title
+- Scale: detect from title block, but require the user to calibrate each 
+  sheet by clicking two points of known distance before measuring. Warn if 
+  the PDF appears printed at a different size than the stated scale.
+- Tools: linear, polyline, area, and count, with color-coded markups mapped 
+  to a bid item or assembly
+- Every takeoff quantity links to its markup. Clicking a quantity opens the 
+  sheet at that exact location.
+- If the company's own takeoff differs from the owner's bid schedule 
+  quantity by more than a user-set %, flag it for review.
+
+E. MANDATORY REVIEW
+- One review table with every extracted or suggested quantity: source, 
+  confidence (amber = low), and sheet link. Each must be confirmed or edited 
+  before it can feed the estimate.
+
+F. ADDENDA
+- Upload addenda anytime. Detect changed bid items, quantities, and sheets, 
+  show a clear before/after diff, and let the user accept changes into the 
+  estimate. Keep version history of the bid package. Track which addenda 
+  have been acknowledged for the bid form.
+- If an addendum changes quantities on RFQs already sent or exported, flag 
+  the affected RFQs and offer to generate revised versions (labeled 
+  "Revision 1", "Revision 2", etc.).
+
+G. SPECIFICATIONS
+- Extract material requirements referenced by bid items (aggregate type and 
+  gradation, asphalt binder grade, pipe material and class, concrete 
+  strength, etc.) with spec section references, so material lists and RFQs 
+  state exactly what is required.
+- If a bid item references standard specifications that weren't uploaded 
+  (e.g., state DOT standard specs), flag it and let the user upload them or 
+  enter the requirement manually.
+
+===== PART 3: HISTORICAL JOB IMPORT ("Teach TrueGrade From Your Past Jobs") =====
+
+1. UPLOAD past job cost reports: PDF, Excel/CSV, images of printed reports. 
+   Multiple files per job (bid estimate + final job cost report).
+2. AI EXTRACTION of line items (activity, quantity, unit, estimated cost, 
+   actual cost, hours, equipment, materials).
+3. MANDATORY REVIEW beside the source document; low-confidence fields in 
+   amber; never auto-import.
+4. MAPPING to existing setup, with inline "create new" for unmatched items.
+5. VARIANCE CALIBRATION: estimated vs. actual per activity with suggested 
+   adjustments, each requiring Approve / Edit / Dismiss. Never auto-adjust.
+6. Manual entry form for companies without clean documents.
+
+===== PART 4: ESTIMATE BUILDER (per job) =====
+
+- Pre-populated from confirmed takeoff quantities. When a bid schedule 
+  exists, each bid item is a section; otherwise use the default sections: 
+  Project Setup → Earthwork → Wet Utilities → Paving & Concrete → Structures 
+  → Indirect Costs.
+- BID ITEM MAPPING: Each bid item is mapped to one or more assemblies. AI 
+  suggests mappings; the user confirms. Unmapped bid items are flagged and 
+  block final output.
+- Project Setup: type, labor mode (open shop vs. prevailing wage), haul 
+  distances, tax, permits
+- JOB-LEVEL OVERRIDES: Any rate, production rate, material price, or 
+  equipment cost can be overridden for this job without changing company 
+  defaults. Overrides are visibly marked and logged with an optional reason.
+- FORMULA TRANSPARENCY: Every line has a "How was this calculated?" expander 
+  showing the math in plain English and which setup values and quantities 
+  fed it (with links to the source sheet).
+- CONFIDENCE INDICATOR: Each line shows whether it's based on calibrated 
+  data, verified company values, supplier quotes, or unverified values. A 
+  summary reads, for example: "82% of this estimate is based on calibrated, 
+  verified, or quoted data."
+- Saveable, duplicable, versioned.
+
+===== PART 5: MATERIAL LIST & SUPPLIER RFQs ("Get Prices") =====
+
+A. MATERIAL LIST
+- Generate from confirmed quantities × assembly material components: every 
+  material with quantity, unit, spec requirement and section, waste %, and 
+  unit conversions using the company's own values (CY to tons via density, 
+  SY × thickness to tons, swell/shrink for import and export).
+- Consolidate identical materials across bid items while keeping 
+  traceability to which bid items use them.
+- Fully editable before sending; users can add or remove lines.
+- Build subcontractor scope packages the same way (scope description, 
+  related bid items, quantities).
+
+B. RFQ GENERATION
+- Generate one RFQ per supplier category, plus a combined master RFQ.
+- Every RFQ gets a unique RFQ number (e.g., IR-2026-0142-AGG-R0: company 
+  prefix, job number, category, revision), shown in the file name, the 
+  spreadsheet header, and the email subject, so any returned file can be 
+  matched to the right job, category, and revision.
+- Header: company logo, RFQ number, project name, owner, project number, 
+  location, bid date, quote due date/time, delivery location, estimator 
+  name/phone/email, addenda included, and a "SUPPLIER NAME / CONTACT" 
+  field for the supplier to fill in.
+- Line columns: hidden line ID (for re-import matching), description, spec 
+  requirement and section, quantity, unit, UNIT PRICE (blank), EXTENDED 
+  PRICE (formula), lead time (blank), notes / alternate offered (blank).
+- Terms block (blank for supplier): quote valid until, tax included Y/N, 
+  freight/delivery included Y/N, minimum order, exclusions.
+- Lock all cells except supplier-entry cells.
+- Two versions of each RFQ:
+  - GENERIC: supplier name left blank, for sending to anyone
+  - PER-SUPPLIER: supplier name and contact pre-filled from the directory, 
+    so the return is automatically attributed to that supplier
+
+C. TWO WAYS TO GET RFQs OUT (both are first-class; neither is a fallback)
+
+C1. SEND FROM TRUEGRADE
+- Select suppliers per category from the directory (suggested by category 
+  and service area). The estimator previews and approves every email before 
+  it is sent. Uses the company's chosen sending method (Setup step 8).
+- Each email contains the .xlsx attachment AND a secure no-login link to an 
+  online quote form with the same lines.
+- Status per supplier: sent, opened, responded, declined, overdue. 
+  Automatic reminders to suppliers at user-set intervals before the due 
+  time. Full activity log.
+
+C2. EXPORT AND SEND IT MYSELF
+- On every RFQ, a prominent "Download" button offering:
+  - Excel (.xlsx), the recommended format for suppliers to fill in
+  - PDF (read-only, for reference or suppliers who prefer to write their 
+    own quote)
+  - CSV
+  - Per-supplier copies (one pre-filled file per selected supplier)
+  - "Download all" as a single .zip containing every category RFQ for the 
+    job, named clearly (e.g., "IR-2026-0142 - Aggregates - R0.xlsx")
+- "Copy email text" button: copies a ready-to-paste subject line and 
+  message body (from the company's default template in Setup step 1) with 
+  the RFQ number, project name, and quote due date filled in.
+- "Open in my email" button: opens the user's default email program with 
+  subject and body pre-filled (mailto). Note in the UI that the file must 
+  be attached manually, since mailto cannot attach files.
+- Allow downloading and forwarding to anyone, including people outside the 
+  supplier directory (internal team members, partners, new suppliers).
+- After a manual send, "Mark as sent" lets the user record who it went to 
+  (pick from the directory or type a name/email; unknown recipients can be 
+  saved to the directory in one click) and when. Manually sent RFQs then 
+  appear in the same status tracker, labeled "Sent outside TrueGrade." 
+  Open tracking is unavailable for these; say so plainly.
+- Reminders for manually sent RFQs go to the ESTIMATOR ("Aggregates quote 
+  from [supplier] is due in 24 hours and hasn't been logged"), not the 
+  supplier.
+- Log every download (who, when, which file, which revision).
+- If an RFQ is downloaded and the estimate's quantities change afterward, 
+  show a banner: "This RFQ changed after you downloaded it. Download 
+  Revision 1?"
+
+D. QUOTE RETURN & IMPORT (works the same no matter how the RFQ was sent)
+- Accept prices four ways:
+  1. Online quote form (direct entry by supplier)
+  2. Filled .xlsx upload: drag and drop; match to the job and category by 
+     RFQ number and to lines by hidden line IDs
+  3. The supplier's own PDF or document quote: AI extraction, then 
+     mandatory review and mapping to material lines
+  4. Forwarded or pasted email text: AI extraction with mandatory review
+- If a returned spreadsheet has been reformatted and line IDs are missing, 
+  fall back to AI matching by description, quantity, and unit, with 
+  mandatory review.
+- If the returned file is a generic RFQ, ask which supplier it came from 
+  (pre-select if the supplier filled in their name).
+- Capture exclusions, alternates, validity date, and freight terms.
+- Bulk upload: several returned quotes at once, each auto-matched and 
+  queued for review.
+
+E. QUOTE COMPARISON
+- Side-by-side view per material line across suppliers. Highlight lowest 
+  complete price; flag missing lines, exclusions, expired quotes, and 
+  alternates that may not meet spec. Flag quotes priced against an 
+  outdated RFQ revision.
+- Estimator selects a quote per line or per supplier. Selected prices 
+  populate the estimate, labeled with supplier, quote date, and expiry.
+- With approval, selected quotes update the company's material price history.
+- Lines with no quote fall back to the company's last known price, flagged 
+  "unquoted."
+- Export the comparison to Excel.
+
+===== PART 6: POST-JOB CLOSE-OUT =====
+- "Close out this job": enter or upload final actual costs against the saved 
+  estimate, feeding the same review and calibration process as Part 3.
+
+===== PART 7: OUTPUT =====
+- Bid summary PDF with company branding: line items, subtotals, markup, 
+  total. "Client version" (hides internal cost detail) and "internal 
+  version."
+- Bid form export: unit prices and extensions in the exact item order of 
+  the owner's bid schedule, as Excel and PDF, for transfer to the official 
+  bid form.
+- Full estimate export to Excel.
+
+===== UX RULES (NON-NEGOTIABLE) =====
+- Plain language everywhere; every technical term has a hover/tap explainer.
+- Nothing is locked. Setup values are editable from one place and flow to 
+  future estimates. Saved estimates keep original values unless the user 
+  explicitly recalculates.
+- Helpful empty states: every empty screen explains what belongs there and 
+  offers "add manually," "upload documents," or "skip for now."
+- Autosave everywhere.
+- Calm palette. Amber for warnings and flags. Red only for destructive 
+  delete confirmations.
+- Desktop-first (plan viewer needs screen space); forms usable on a tablet.
+- Every AI-extracted or AI-suggested value is labeled as such until a human 
+  confirms it.
+- Every quantity and price shows its source.
+- Every file the app generates is downloadable. The user is never forced to 
+  send, share, or finish anything inside TrueGrade.
+
+===== TECHNICAL REQUIREMENTS =====
+- Background job queue for document processing, with retries and status
+- Object storage for files, tenant-isolated, with upload virus scanning
+- In-browser PDF rendering that stays responsive on 500-sheet sets
+- Excel generation with cell protection, hidden columns, and formulas that 
+  work in Excel, Google Sheets, and Apple Numbers
+- Transactional email with SPF/DKIM/DMARC on the platform sending domain; 
+  per-tenant custom domain verification; Google and Microsoft OAuth for 
+  connected mailboxes
+- Secure, expiring, tenant-scoped links for supplier quote forms
+- Log AI processing cost per tenant
+
+BUILD ORDER (confirm each phase works before starting the next):
+Phase 1: Multi-tenant foundation, auth, roles, isolation tests (records, 
+         files, links), setup wizard steps 1-4 including supplier directory
+Phase 2: Setup wizard steps 5-7 (production rates, soils, assemblies)
+Phase 3: Plan room: upload, sheet index, plan viewer, bid schedule and 
+         tabulated quantity extraction with review, manual takeoff tools
+Phase 4: Estimate builder populated from takeoff, bid item mapping, 
+         overrides, confidence indicators
+Phase 5: Material list, RFQ generation, EXPORT AND SEND IT MYSELF (C2), 
+         spreadsheet and PDF quote import, quote comparison
+Phase 6: Send from TrueGrade (C1) with the three sending methods (Setup 
+         step 8), supplier quote form, status tracking, reminders
+Phase 7: AI-assisted measurement from drawings, LandXML earthwork import, 
+         addenda diffing and RFQ revisions, spec extraction
+Phase 8: Historical job import and variance calibration
+Phase 9: Close-out flow, bid form export, PDF output
+Phase 10: Internal admin tool for creating new company tenants
+
+Before starting, ask me clarifying questions about: tech stack, AI/OCR and 
+vision provider for document extraction, PDF viewer/markup library, Excel 
+generation library, email provider, file storage, auth provider, and 
+hosting. Recommend defaults with reasons if I have no preference.
