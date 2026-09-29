@@ -211,7 +211,7 @@ export function suggestMeasurements(companyId: string, pdf: Buffer, textItems: {
   const list = textItems.map((t) => `${t.i}\t${Math.round(t.x)},${Math.round(t.y)}\t${t.s}`).join("\n");
   return extract({
     companyId, feature: "ai_measure", refId, pdf, schema: MeasureSchema,
-    text: `Text items on this sheet (index, x,y in PDF points from bottom-left, text):\n${list}`,
+    text: `Text items on this sheet (index, x,y in points from the top-left corner, text):\n${list}`,
     prompt: `You are helping a heavy civil estimator take off quantities from one plan sheet (plan & profile, utility plan, paving plan, or structure plan).
 Suggest quantities an estimator would measure, using only what the sheet itself shows:
 - pipe run lengths by size and material (from profile callouts, stationing differences, or length labels)

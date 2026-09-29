@@ -5,6 +5,9 @@ import { extractBidSchedule, extractSupplierQuote, slicePdf } from "./ai";
 import { similarity } from "./rfq";
 import { bbox, packTin, parseLandXml } from "./landxml";
 import { diffSchedule } from "./addenda";
+import { sectionNumbers, normSection } from "./specs";
+import { extractSpecRequirements, suggestMeasurements } from "./ai";
+import { pageTextItems } from "./pdftext";
 import { newKey } from "./storage";
 import { deliver } from "./mail";
 import { afterDelivery, sweepReminders } from "./rfqsend";
@@ -12,7 +15,7 @@ import { afterDelivery, sweepReminders } from "./rfqsend";
 // Postgres-backed background job queue with retries and progress. Runs inside
 // the web process by default (see instrumentation.ts) or as `npm run worker`.
 
-export type JobType = "PROCESS_DOCUMENT" | "EXTRACT_BID_SCHEDULE" | "EXTRACT_QUOTE" | "SEND_EMAIL" | "EXTRACT_ADDENDUM";
+export type JobType = "PROCESS_DOCUMENT" | "EXTRACT_BID_SCHEDULE" | "EXTRACT_QUOTE" | "SEND_EMAIL" | "EXTRACT_ADDENDUM" | "EXTRACT_SPECS" | "SUGGEST_MEASURE";
 
 export async function enqueue(companyId: string, type: JobType, payload: Record<string, unknown>) {
   return prisma.job.create({ data: { companyId, type, payload: payload as any } });
@@ -60,6 +63,7 @@ async function processDocument(companyId: string, jobId: string, p: { documentId
       where: { id: doc.id },
       data: {
         pageCount, hasText: textPages > 0, status: "READY", suggestedKind: suggested,
+        specSections: sectionNumbers(pages.map((x) => x.text).join("\n")),
         kind: doc.kindConfirmed ? doc.kind : suggested,
         ...(suggested === "ADDENDUM" && doc.addendumNumber == null ? { addendumNumber: addendumNo(`${doc.filename} ${pages.slice(0, 1).map((x) => x.text).join(" ")}`) } : {}),
         statusDetail: textPages === pageCount ? "Vector PDF: text read directly"
@@ -131,6 +135,67 @@ async function extractAddendum(companyId: string, p: { documentId: string }) {
   await db.document.update({ where: { id: doc.id }, data: { statusDetail: res.items.length ? `Found ${res.items.length} bid items; ${n} differ from the current schedule` : "No bid schedule found in this addendum" } });
 }
 
+/** Read material requirements for this job's bid items from the uploaded specifications. */
+async function extractSpecs(companyId: string, p: { projectId: string }) {
+  const db = tenantDb(companyId);
+  const items = await db.bidItem.findMany({ where: { projectId: p.projectId }, orderBy: { sortOrder: "asc" } });
+  const docs = await db.document.findMany({ where: { projectId: p.projectId, kind: "SPECS" } });
+  await db.specRequirement.deleteMany({ where: { projectId: p.projectId, source: "AI", status: "DRAFT" } });
+  const byNum = new Map(items.map((b) => [b.itemNumber.trim().toUpperCase(), b]));
+  for (const doc of docs) {
+    const buf = await storage.get(companyId, doc.storageKey);
+    // Send only the pages that mention these bid items' sections or materials (max 60).
+    let pages: number[] | undefined;
+    if (doc.hasText) {
+      const { pages: txt } = await readPdfPages(new Uint8Array(buf));
+      const secs = items.map((b) => (b.specSection ? normSection(b.specSection) : "")).filter((x) => x.length >= 3);
+      const words = [...new Set(items.flatMap((b) => b.description.toLowerCase().match(/[a-z]{5,}/g) ?? []))];
+      const scored = txt.map((pg) => {
+        const t = pg.text.toLowerCase(), digits = pg.text.replace(/[^0-9]/g, " ");
+        const s = secs.filter((x) => digits.includes(x) || t.replace(/\s/g, "").includes(x)).length * 5 + words.filter((w) => t.includes(w)).length;
+        return { n: pg.pageIndex + 1, s };
+      }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 60).map((x) => x.n).sort((a, b) => a - b);
+      pages = scored.length ? scored : undefined;
+    } else if ((doc.pageCount ?? 0) > 60) {
+      pages = Array.from({ length: 60 }, (_, i) => i + 1);
+    }
+    const res = await extractSpecRequirements(companyId, await slicePdf(buf, pages), items.map((b) => ({ itemNumber: b.itemNumber, description: b.description, specSection: b.specSection })), doc.id);
+    await db.specRequirement.createMany({
+      data: [
+        ...res.requirements.map((r) => ({
+          projectId: p.projectId, bidItemId: r.item_number ? byNum.get(r.item_number.trim().toUpperCase())?.id ?? null : null,
+          specSection: r.spec_section, material: r.material, requirement: r.requirement, documentId: doc.id,
+          pageIndex: (pages?.[r.page - 1] ?? r.page) - 1, source: "AI", confidence: r.confidence === "low" ? "LOW" : "HIGH", status: "DRAFT",
+        })),
+        ...res.missing_standards.map((m) => ({
+          projectId: p.projectId, bidItemId: m.item_number ? byNum.get(m.item_number.trim().toUpperCase())?.id ?? null : null,
+          requirement: m.note ?? `Cites ${m.reference}`, standardRef: m.reference, missingStandard: true, documentId: doc.id, source: "AI", confidence: "LOW", status: "DRAFT",
+        })),
+      ] as any,
+    });
+  }
+}
+
+/** AI-suggested quantities for one sheet, pinned to the callouts they were read from. */
+async function suggestMeasure(companyId: string, p: { documentId: string; pageIndex: number }) {
+  const db = tenantDb(companyId);
+  const doc = await db.document.findUnique({ where: { id: p.documentId } });
+  if (!doc) return;
+  const buf = await storage.get(companyId, doc.storageKey);
+  const items = await pageTextItems(new Uint8Array(buf), p.pageIndex);
+  const res = await suggestMeasurements(companyId, await slicePdf(buf, [p.pageIndex + 1]), items, doc.id);
+  await db.takeoffSuggestion.deleteMany({ where: { documentId: doc.id, pageIndex: p.pageIndex, status: "SUGGESTED" } });
+  await db.takeoffSuggestion.createMany({
+    data: res.suggestions.map((sg) => {
+      const pts = sg.anchors.map((i) => items[i]).filter(Boolean).map((t) => [Math.round(t.x * 10) / 10, Math.round(t.y * 10) / 10]);
+      return {
+        projectId: doc.projectId, documentId: doc.id, pageIndex: p.pageIndex, kind: sg.kind, label: sg.label, quantity: sg.quantity, unit: sg.unit,
+        points: (pts.length ? pts : []) as any, evidence: sg.evidence, confidence: sg.confidence === "high" ? "HIGH" : "LOW", status: "SUGGESTED",
+      };
+    }) as any,
+  });
+}
+
 async function extractQuote(companyId: string, p: { documentId: string; quoteId: string }) {
   const db = tenantDb(companyId);
   const doc = await db.document.findUnique({ where: { id: p.documentId } });
@@ -178,6 +243,8 @@ export async function runOnce() {
     else if (job.type === "EXTRACT_BID_SCHEDULE") await extractSchedule(job.companyId, payload);
     else if (job.type === "EXTRACT_QUOTE") await extractQuote(job.companyId, payload);
     else if (job.type === "EXTRACT_ADDENDUM") await extractAddendum(job.companyId, payload);
+    else if (job.type === "EXTRACT_SPECS") await extractSpecs(job.companyId, payload);
+    else if (job.type === "SUGGEST_MEASURE") await suggestMeasure(job.companyId, payload);
     else if (job.type === "SEND_EMAIL") { await deliver(payload.messageId); await afterDelivery(job.companyId, payload.messageId, null); }
     await prisma.job.update({ where: { id: job.id }, data: { status: "DONE", progress: 100, error: null } });
   } catch (e) {

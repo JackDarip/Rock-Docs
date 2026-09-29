@@ -77,3 +77,19 @@ export async function readPdfPages(data: Uint8Array, onProgress?: (done: number,
   await doc.destroy();
   return { pageCount: pages.length, pages };
 }
+
+/** Text items on one page with positions in viewer coordinates (scale 1, origin top-left). */
+export async function pageTextItems(data: Uint8Array, pageIndex: number, max = 1500) {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const doc = await pdfjs.getDocument({ data, verbosity: 0, useSystemFonts: false, disableFontFace: true }).promise;
+  try {
+    const page = await doc.getPage(pageIndex + 1);
+    const vp = page.getViewport({ scale: 1 });
+    const tc = await page.getTextContent();
+    const items = (tc.items as any[]).filter((it) => typeof it.str === "string" && it.str.trim());
+    return items.slice(0, max).map((it, i) => {
+      const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]);
+      return { i, x, y, s: String(it.str).trim().slice(0, 120) };
+    });
+  } finally { await doc.destroy(); }
+}

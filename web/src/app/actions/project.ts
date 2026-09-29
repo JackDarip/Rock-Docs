@@ -137,9 +137,14 @@ export async function unconfirmBidItem(projectId: string, id: string) {
 
 export async function applyTakeoffQuantity(projectId: string, bidItemId: string, qty: number) {
   const { db, user } = await projectOr404(projectId);
+  const ai = await db.takeoffMarkup.count({ where: { projectId, bidItemId, source: "AI_ACCEPTED" } });
   await db.bidItem.updateMany({
     where: { projectId, id: bidItemId },
-    data: { quantity: qty, source: "MANUAL", sourceNote: "From your takeoff markups", status: "CONFIRMED", confirmedById: user.id, confirmedAt: new Date(), aiExtracted: false, confidence: "HIGH" },
+    data: {
+      quantity: qty, source: ai ? "AI_MEASURE" : "MANUAL",
+      sourceNote: ai ? `From your takeoff markups (${ai} AI-suggested, accepted by you)` : "From your takeoff markups",
+      status: "CONFIRMED", confirmedById: user.id, confirmedAt: new Date(), aiExtracted: ai > 0, confidence: "HIGH",
+    },
   });
   revalidatePath(`/projects/${projectId}`, "layout");
 }

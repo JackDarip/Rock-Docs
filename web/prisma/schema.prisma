@@ -294,6 +294,7 @@ model Document {
   addendumNumber Int?
   acknowledged   Boolean   @default(false)
   acknowledgedAt DateTime?
+  specSections   String[]  @default([]) // spec section numbers found in the text, e.g. 331100, 02720
   uploadedById   String?
   createdAt      DateTime  @default(now())
 

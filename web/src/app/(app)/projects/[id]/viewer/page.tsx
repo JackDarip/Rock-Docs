@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireCtx } from "@/lib/auth";
 import { EmptyState, ButtonLink } from "@/components/ui";
 import { PlanViewer } from "@/components/PlanViewer";
+import { aiEnabled } from "@/lib/ai";
 
 export default async function Viewer({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ doc?: string; page?: string; markup?: string }> }) {
   const { id } = await params;
@@ -28,7 +29,7 @@ export default async function Viewer({ params, searchParams }: { params: Promise
         bidItems={bidItems.map((b) => ({ id: b.id, itemNumber: b.itemNumber, description: b.description, unit: b.unit }))}
         markups={JSON.parse(JSON.stringify(markups))}
         initialPage={focus ? focus.pageIndex + 1 : Math.max(1, Number(sp.page) || 1)}
-        focusMarkupId={focus?.id ?? null} />
+        focusMarkupId={focus?.id ?? null} aiOn={aiEnabled()} />
     </div>
   );
 }
