@@ -18,30 +18,37 @@ enum Role {
 }
 
 model Company {
-  id                 String   @id @default(cuid())
-  name               String
-  subdomain          String   @unique
-  rfqPrefix          String   @default("CO")
-  logoPath           String?
-  accentColor        String   @default("#FF6B00")
-  defaultMarkupPct   Float?
-  overheadPct        Float?
-  salesTaxPct        Float?
-  projectTypes       String[] @default([])
-  bondingApproach    String?
-  bondingPct         Float?
-  rfqSubject         String?
-  rfqBody            String?
-  rfqSignature       String?
-  quoteExpiryDays    Int      @default(30)
-  takeoffVariancePct Float    @default(5)
-  emailMethod        String   @default("PLATFORM")
-  customEmailDomain  String?
-  aiMonthlyLimitUsd  Float    @default(50)
-  setupProgress      Json     @default("{}")
-  jobCounter         Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  name                  String
+  subdomain             String    @unique
+  rfqPrefix             String    @default("CO")
+  logoPath              String?
+  accentColor           String    @default("#FF6B00")
+  defaultMarkupPct      Float?
+  overheadPct           Float?
+  salesTaxPct           Float?
+  projectTypes          String[]  @default([])
+  bondingApproach       String?
+  bondingPct            Float?
+  rfqSubject            String?
+  rfqBody               String?
+  rfqSignature          String?
+  quoteExpiryDays       Int       @default(30)
+  takeoffVariancePct    Float     @default(5)
+  emailMethod           String    @default("PLATFORM")
+  customEmailDomain     String?
+  emailDomainId         String? // id of the domain at the email provider (Resend)
+  emailDomainRecords    Json? // DNS records the provider asks for, shown in Setup
+  emailDomainVerifiedAt DateTime?
+  emailDomainCheckedAt  DateTime?
+  emailDomainStatus     String? // provider status text from the last check
+  emailFromLocal        String    @default("bids") // bids@theircompany.com
+  reminderHours         Int[]     @default([48, 24]) // supplier reminders, hours before quotes are due
+  aiMonthlyLimitUsd     Float     @default(50)
+  setupProgress         Json      @default("{}")
+  jobCounter            Int       @default(0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   users User[]
 }
@@ -77,31 +84,31 @@ model Session {
 // ---------- Company setup ----------
 
 model LaborRole {
-  id             String   @id @default(cuid())
-  companyId      String
-  name           String
-  baseWage       Float?
-  burdenPct      Float?
-  prevailingWage Float?
+  id               String   @id @default(cuid())
+  companyId        String
+  name             String
+  baseWage         Float?
+  burdenPct        Float?
+  prevailingWage   Float?
   prevailingFringe Float?
-  notes          String?
-  createdAt      DateTime @default(now())
+  notes            String?
+  createdAt        DateTime @default(now())
 
   @@index([companyId])
 }
 
 model PrevailingWageRate {
-  id          String   @id @default(cuid())
-  companyId   String
-  county      String
-  projectRef  String?
-  laborRoleId String?
+  id             String    @id @default(cuid())
+  companyId      String
+  county         String
+  projectRef     String?
+  laborRoleId    String?
   classification String
-  baseRate    Float?
-  fringe      Float?
-  source      String?
-  effectiveAt DateTime?
-  createdAt   DateTime @default(now())
+  baseRate       Float?
+  fringe         Float?
+  source         String?
+  effectiveAt    DateTime?
+  createdAt      DateTime  @default(now())
 
   @@index([companyId])
 }
@@ -162,19 +169,19 @@ model Contact {
 }
 
 model Material {
-  id              String    @id @default(cuid())
-  companyId       String
-  name            String
-  unit            String
-  unitCost        Float?
-  categoryCode    String?
-  supplierId      String?
-  lastQuotedAt    DateTime?
+  id               String    @id @default(cuid())
+  companyId        String
+  name             String
+  unit             String
+  unitCost         Float?
+  categoryCode     String?
+  supplierId       String?
+  lastQuotedAt     DateTime?
   densityTonsPerCy Float?
-  wastePct        Float?
-  specNotes       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  wastePct         Float?
+  specNotes        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([companyId])
 }
@@ -194,16 +201,18 @@ model MaterialPriceHistory {
 }
 
 model ProductionRate {
-  id           String   @id @default(cuid())
-  companyId    String
-  activity     String
-  unit         String
-  outputPerDay Float?
-  hoursPerDay  Float    @default(8)
-  crew         Json     @default("{\"labor\":[],\"equipment\":[]}") // {labor:[{laborRoleId,count}], equipment:[{equipmentId,count}]}
-  notes        String?
-  verified     Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  id              String    @id @default(cuid())
+  companyId       String
+  activity        String
+  unit            String
+  outputPerDay    Float?
+  hoursPerDay     Float     @default(8)
+  crew            Json      @default("{\"labor\":[],\"equipment\":[]}") // {labor:[{laborRoleId,count}], equipment:[{equipmentId,count}]}
+  notes           String?
+  verified        Boolean   @default(true)
+  calibratedAt    DateTime? // set when an approved calibration from past jobs changed it
+  calibrationNote String?
+  createdAt       DateTime  @default(now())
 
   @@index([companyId])
 }
@@ -243,7 +252,7 @@ model Project {
   jobNumber        String
   name             String
   owner            String?
-  ownerType        String?   // FEDERAL | STATE_DOT | COUNTY_CITY | PRIVATE
+  ownerType        String? // FEDERAL | STATE_DOT | COUNTY_CITY | PRIVATE
   projectNumber    String?
   location         String?
   bidDueAt         DateTime?
@@ -267,25 +276,26 @@ model Project {
 }
 
 model Document {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   companyId      String
   projectId      String
   filename       String
   storageKey     String
   size           Int
   mime           String
-  kind           String   @default("OTHER") // PLANS | BID_SCHEDULE | SPECS | GEOTECH | ADDENDUM | CAD | QUOTE | OTHER
-  kindConfirmed  Boolean  @default(false)
+  kind           String    @default("OTHER") // PLANS | BID_SCHEDULE | SPECS | GEOTECH | ADDENDUM | CAD | QUOTE | OTHER
+  kindConfirmed  Boolean   @default(false)
   suggestedKind  String?
   pageCount      Int?
   hasText        Boolean?
-  status         String   @default("UPLOADED") // UPLOADED | PROCESSING | READY | FAILED
+  status         String    @default("UPLOADED") // UPLOADED | PROCESSING | READY | FAILED
   statusDetail   String?
-  scanStatus     String   @default("NOT_SCANNED")
+  scanStatus     String    @default("NOT_SCANNED")
   addendumNumber Int?
-  acknowledged   Boolean  @default(false)
+  acknowledged   Boolean   @default(false)
+  acknowledgedAt DateTime?
   uploadedById   String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   @@index([companyId, projectId])
 }
@@ -303,8 +313,9 @@ model Sheet {
   classConfirmed Boolean @default(false)
   hasText        Boolean @default(false)
   scaleText      String?
-  feetPerUnit    Float?  // calibration: real feet per PDF user-space unit
+  feetPerUnit    Float? // calibration: real feet per PDF user-space unit
   calibratedById String?
+  thumbKey       String? // cached thumbnail image in storage
 
   @@unique([documentId, pageIndex])
   @@index([companyId, projectId])
@@ -326,60 +337,61 @@ model UploadSession {
 }
 
 model BidItem {
-  id            String   @id @default(cuid())
-  companyId     String
-  projectId     String
-  itemNumber    String
-  description   String
-  specSection   String?
-  unit          String
-  quantity      Float?
-  section       String?  // default section when there is no owner schedule
-  source        String   @default("MANUAL") // BID_SCHEDULE | TABULATED | AI_MEASURE | MANUAL | LANDXML
-  sourceNote    String?
-  documentId    String?
-  pageIndex     Int?
-  confidence    String   @default("HIGH") // HIGH | LOW
-  aiExtracted   Boolean  @default(false)
-  status        String   @default("DRAFT") // DRAFT | CONFIRMED
-  confirmedById String?
-  confirmedAt   DateTime?
-  sortOrder     Int      @default(0)
+  id              String    @id @default(cuid())
+  companyId       String
+  projectId       String
+  itemNumber      String
+  description     String
+  specSection     String?
+  unit            String
+  quantity        Float?
+  section         String? // default section when there is no owner schedule
+  source          String    @default("MANUAL") // BID_SCHEDULE | TABULATED | AI_MEASURE | MANUAL | LANDXML
+  sourceNote      String?
+  documentId      String?
+  pageIndex       Int?
+  confidence      String    @default("HIGH") // HIGH | LOW
+  aiExtracted     Boolean   @default(false)
+  status          String    @default("DRAFT") // DRAFT | CONFIRMED
+  confirmedById   String?
+  confirmedAt     DateTime?
+  sortOrder       Int       @default(0)
   specRequirement String?
-  createdAt     DateTime @default(now())
+  createdAt       DateTime  @default(now())
 
   @@index([companyId, projectId])
 }
 
 model TakeoffMarkup {
-  id         String   @id @default(cuid())
-  companyId  String
-  projectId  String
-  documentId String
-  pageIndex  Int
-  bidItemId  String?
-  tool       String   // LINEAR | POLYLINE | AREA | COUNT
-  points     Json     // [[x,y], ...] in PDF user-space units
-  quantity   Float
-  unit       String
-  color      String   @default("#FF6B00")
-  label      String?
+  id          String   @id @default(cuid())
+  companyId   String
+  projectId   String
+  documentId  String
+  pageIndex   Int
+  bidItemId   String?
+  tool        String // LINEAR | POLYLINE | AREA | COUNT
+  points      Json // [[x,y], ...] in PDF user-space units
+  quantity    Float
+  unit        String
+  color       String   @default("#FF6B00")
+  label       String?
+  source      String   @default("MANUAL") // MANUAL | AI_ACCEPTED
   createdById String?
-  createdAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   @@index([companyId, projectId])
 }
 
 model BidItemAssembly {
-  id         String   @id @default(cuid())
-  companyId  String
-  projectId  String
-  bidItemId  String
-  assemblyId String
-  qtyFactor  Float    @default(1)
-  confirmed  Boolean  @default(false)
-  aiSuggested Boolean @default(false)
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  companyId   String
+  projectId   String
+  bidItemId   String
+  assemblyId  String
+  qtyFactor   Float    @default(1)
+  confirmed   Boolean  @default(false)
+  aiSuggested Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
   @@index([companyId, projectId])
 }
@@ -388,7 +400,7 @@ model JobOverride {
   id         String   @id @default(cuid())
   companyId  String
   projectId  String
-  targetType String   // LABOR_ROLE | EQUIPMENT | MATERIAL | PRODUCTION_RATE
+  targetType String // LABOR_ROLE | EQUIPMENT | MATERIAL | PRODUCTION_RATE
   targetId   String
   field      String
   value      Float
@@ -415,23 +427,23 @@ model EstimateVersion {
 }
 
 model MaterialLine {
-  id              String   @id @default(cuid())
-  companyId       String
-  projectId       String
-  materialId      String?
-  description     String
-  unit            String
-  quantity        Float
-  wastePct        Float    @default(0)
-  specRequirement String?
-  specSection     String?
-  categoryCode    String?
-  bidItemRefs     Json     @default("[]") // [{bidItemId,itemNumber,qty}]
-  manual          Boolean  @default(false)
-  excluded        Boolean  @default(false)
+  id                  String   @id @default(cuid())
+  companyId           String
+  projectId           String
+  materialId          String?
+  description         String
+  unit                String
+  quantity            Float
+  wastePct            Float    @default(0)
+  specRequirement     String?
+  specSection         String?
+  categoryCode        String?
+  bidItemRefs         Json     @default("[]") // [{bidItemId,itemNumber,qty}]
+  manual              Boolean  @default(false)
+  excluded            Boolean  @default(false)
   selectedQuoteLineId String?
-  sortOrder       Int      @default(0)
-  updatedAt       DateTime @updatedAt
+  sortOrder           Int      @default(0)
+  updatedAt           DateTime @updatedAt
 
   @@index([companyId, projectId])
 }
@@ -440,10 +452,10 @@ model Rfq {
   id           String   @id @default(cuid())
   companyId    String
   projectId    String
-  categoryCode String   // category code or ALL for the master RFQ
+  categoryCode String // category code or ALL for the master RFQ
   revision     Int      @default(0)
   number       String
-  lines        Json     // frozen snapshot of lines at generation time
+  lines        Json // frozen snapshot of lines at generation time
   contentHash  String
   superseded   Boolean  @default(false)
   createdById  String?
@@ -454,32 +466,41 @@ model Rfq {
 }
 
 model RfqRecipient {
-  id             String    @id @default(cuid())
-  companyId      String
-  rfqId          String
-  supplierId     String?
-  name           String
-  email          String?
-  method         String    @default("OUTSIDE") // OUTSIDE | PLATFORM | DOMAIN | CONNECTED
-  status         String    @default("SENT")    // SENT | OPENED | RESPONDED | DECLINED
-  sentAt         DateTime  @default(now())
-  token          String    @unique
-  tokenExpiresAt DateTime
-  createdById    String?
+  id                  String    @id @default(cuid())
+  companyId           String
+  rfqId               String
+  supplierId          String?
+  name                String
+  email               String?
+  method              String    @default("OUTSIDE") // OUTSIDE | PLATFORM | DOMAIN | CONNECTED
+  status              String    @default("SENT") // SENT | OPENED | RESPONDED | DECLINED
+  sentAt              DateTime  @default(now())
+  token               String    @unique
+  tokenExpiresAt      DateTime
+  createdById         String?
+  openedAt            DateTime?
+  openCount           Int       @default(0)
+  respondedAt         DateTime?
+  declinedAt          DateTime?
+  declineReason       String?
+  reminderHours       Int[]     @default([])
+  remindersSent       Int[]     @default([])
+  estimatorRemindedAt DateTime?
+  lastError           String?
 
   @@index([companyId, rfqId])
 }
 
 model RfqDownload {
-  id         String   @id @default(cuid())
-  companyId  String
-  rfqId      String
-  userId     String?
-  format     String
-  revision   Int
-  supplierId String?
+  id          String   @id @default(cuid())
+  companyId   String
+  rfqId       String
+  userId      String?
+  format      String
+  revision    Int
+  supplierId  String?
   contentHash String
-  createdAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   @@index([companyId, rfqId])
 }
@@ -492,7 +513,7 @@ model Quote {
   rfqRevision     Int?
   supplierId      String?
   supplierName    String?
-  source          String    // FORM | XLSX | PDF | EMAIL
+  source          String // FORM | XLSX | PDF | EMAIL
   documentId      String?
   status          String    @default("REVIEW") // REVIEW | CONFIRMED
   quoteNumber     String?
@@ -531,18 +552,18 @@ model QuoteLine {
 }
 
 model Job {
-  id        String   @id @default(cuid())
-  companyId String
-  type      String
-  payload   Json
-  status    String   @default("QUEUED") // QUEUED | RUNNING | DONE | FAILED
-  attempts  Int      @default(0)
-  maxAttempts Int    @default(3)
-  runAt     DateTime @default(now())
-  progress  Int      @default(0)
-  error     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  companyId   String
+  type        String
+  payload     Json
+  status      String   @default("QUEUED") // QUEUED | RUNNING | DONE | FAILED
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  runAt       DateTime @default(now())
+  progress    Int      @default(0)
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([status, runAt])
   @@index([companyId])
@@ -572,4 +593,299 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([companyId])
+}
+
+// ---------- Phase 6: sending from the app ----------
+
+model EmailMessage {
+  id             String    @id @default(cuid())
+  companyId      String
+  rfqId          String?
+  recipientId    String?
+  kind           String // RFQ | REMINDER | ESTIMATOR_REMINDER | DNS_INSTRUCTIONS | TEST | SCOPE
+  method         String // PLATFORM | DOMAIN | CONNECTED | LOG
+  fromAddress    String
+  fromName       String?
+  toAddress      String
+  replyTo        String?
+  subject        String
+  text           String
+  html           String?
+  attachmentKey  String?
+  attachmentName String?
+  status         String    @default("QUEUED") // QUEUED | SENT | FAILED | LOGGED
+  providerId     String?
+  error          String?
+  connectionId   String?
+  sentById       String?
+  fallbackNote   String?
+  createdAt      DateTime  @default(now())
+  sentAt         DateTime?
+
+  @@index([companyId, rfqId])
+  @@index([connectionId, sentAt])
+}
+
+model MailboxConnection {
+  id              String   @id @default(cuid())
+  companyId       String
+  userId          String
+  provider        String // GOOGLE | MICROSOFT
+  email           String
+  accessTokenEnc  String
+  refreshTokenEnc String?
+  expiresAt       DateTime
+  dailyLimit      Int
+  lastError       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([companyId, userId])
+}
+
+model OAuthState {
+  id        String   @id // random state value
+  companyId String
+  userId    String
+  provider  String
+  verifier  String
+  returnTo  String
+  expiresAt DateTime
+}
+
+model RfqEvent {
+  id          String   @id @default(cuid())
+  companyId   String
+  rfqId       String
+  recipientId String?
+  type        String // SENT | MARKED_SENT | OPENED | RESPONDED | DECLINED | REMINDER | ESTIMATOR_REMINDER | FAILED | STATUS | DOWNLOADED | REVISED
+  detail      String?
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, rfqId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  companyId String
+  userId    String
+  title     String
+  body      String?
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([companyId, userId, readAt])
+}
+
+// ---------- Phase 7: earthwork, addenda, specs, AI measurement ----------
+
+model Surface {
+  id         String   @id @default(cuid())
+  companyId  String
+  projectId  String
+  documentId String
+  name       String
+  role       String   @default("EXISTING") // EXISTING | PROPOSED
+  pointCount Int
+  faceCount  Int
+  units      String // feet | meters (from the LandXML file)
+  bbox       Json // [minX, minY, maxX, maxY]
+  dataKey    String // parsed TIN (points + faces) cached in storage
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model EarthworkCalc {
+  id            String   @id @default(cuid())
+  companyId     String
+  projectId     String
+  existingId    String
+  proposedId    String
+  gridFt        Float
+  areaSf        Float
+  cutCy         Float // bank (in-place) cubic yards
+  fillCy        Float // compacted cubic yards
+  soilTypeId    String?
+  swellPct      Float?
+  shrinkPct     Float?
+  exportLooseCy Float? // surplus hauled off, loose
+  importBankCy  Float? // borrow needed, bank measure
+  note          String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model BidItemChange {
+  id          String    @id @default(cuid())
+  companyId   String
+  projectId   String
+  documentId  String // the addendum
+  bidItemId   String?
+  itemNumber  String
+  changeType  String // ADDED | REMOVED | CHANGED
+  before      Json?
+  after       Json?
+  status      String    @default("PENDING") // PENDING | ACCEPTED | REJECTED
+  decidedById String?
+  decidedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model PackageVersion {
+  id         String   @id @default(cuid())
+  companyId  String
+  projectId  String
+  label      String
+  documentId String?
+  summary    Json // {added, removed, changed, sheets}
+  snapshot   Json // bid items after this version
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model SpecRequirement {
+  id              String   @id @default(cuid())
+  companyId       String
+  projectId       String
+  bidItemId       String?
+  specSection     String?
+  material        String?
+  requirement     String
+  documentId      String?
+  pageIndex       Int?
+  source          String   @default("AI") // AI | MANUAL
+  confidence      String   @default("HIGH")
+  status          String   @default("DRAFT") // DRAFT | CONFIRMED | REJECTED
+  missingStandard Boolean  @default(false) // cites a standard spec that wasn't uploaded
+  standardRef     String?
+  createdAt       DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model TakeoffSuggestion {
+  id          String   @id @default(cuid())
+  companyId   String
+  projectId   String
+  documentId  String
+  pageIndex   Int
+  kind        String // LINEAR | COUNT | AREA
+  label       String
+  quantity    Float
+  unit        String
+  points      Json // anchor(s) in PDF user-space units
+  evidence    String?
+  confidence  String   @default("LOW")
+  status      String   @default("SUGGESTED") // SUGGESTED | ACCEPTED | REJECTED
+  bidItemId   String?
+  markupId    String?
+  decidedById String?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+// ---------- Phase 8/9: past jobs, calibration, close-out ----------
+
+model HistoricalJob {
+  id          String    @id @default(cuid())
+  companyId   String
+  name        String
+  jobNumber   String?
+  projectId   String? // set when this is the close-out of a bid built here
+  kind        String    @default("HISTORICAL") // HISTORICAL | CLOSEOUT
+  completedAt DateTime?
+  notes       String?
+  status      String    @default("DRAFT") // DRAFT | REVIEWED
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([companyId])
+}
+
+model JobCostFile {
+  id           String   @id @default(cuid())
+  companyId    String
+  jobId        String
+  filename     String
+  storageKey   String
+  mime         String
+  size         Int
+  role         String   @default("ACTUAL") // ESTIMATE | ACTUAL | OTHER
+  status       String   @default("UPLOADED") // UPLOADED | PROCESSING | READY | FAILED
+  statusDetail String?
+  scanStatus   String   @default("NOT_SCANNED")
+  createdAt    DateTime @default(now())
+
+  @@index([companyId, jobId])
+}
+
+model JobCostLine {
+  id               String  @id @default(cuid())
+  companyId        String
+  jobId            String
+  fileId           String?
+  pageIndex        Int?
+  activity         String
+  quantity         Float?
+  unit             String?
+  estimatedCost    Float?
+  actualCost       Float?
+  estimatedHours   Float?
+  actualHours      Float?
+  equipment        String?
+  materials        String?
+  productionRateId String?
+  assemblyId       String?
+  confidence       String  @default("HIGH")
+  aiExtracted      Boolean @default(false)
+  status           String  @default("DRAFT") // DRAFT | CONFIRMED | IGNORED
+  notes            String?
+  sortOrder        Int     @default(0)
+
+  @@index([companyId, jobId])
+}
+
+model CalibrationSuggestion {
+  id               String    @id @default(cuid())
+  companyId        String
+  productionRateId String
+  currentOutput    Float?
+  actualOutput     Float
+  suggestedOutput  Float
+  basis            Json // [{jobId, jobName, quantity, hours, outputPerDay}]
+  status           String    @default("PENDING") // PENDING | APPROVED | EDITED | DISMISSED
+  appliedOutput    Float?
+  decidedById      String?
+  decidedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([companyId])
+}
+
+// ---------- Subcontractor scope packages ----------
+
+model ScopePackage {
+  id          String   @id @default(cuid())
+  companyId   String
+  projectId   String
+  name        String
+  trade       String?
+  description String?
+  lines       Json     @default("[]") // [{bidItemId,itemNumber,description,quantity,unit,note}]
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId, projectId])
 }

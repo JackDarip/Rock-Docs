@@ -5,15 +5,29 @@ import { useRouter } from "next/navigation";
 import { markSent, setRecipientStatus } from "@/app/actions/rfq";
 import { Icon } from "@/components/Icon";
 import { PRODUCT_NAME } from "@/config/brand";
+import { RfqSendPanel, type SendSupplier } from "./RfqSendPanel";
 
-type Supplier = { id: string; name: string; email: string | null; categories: string[]; preferred: boolean; serviceArea: string | null };
-type Recipient = { id: string; name: string; email: string | null; method: string; status: string; sentAt: string; token: string; supplierId: string | null };
+type Supplier = SendSupplier & { email: string | null; categories: string[]; serviceArea: string | null };
+type Recipient = {
+  id: string; name: string; email: string | null; method: string; status: string; sentAt: string; token: string; supplierId: string | null;
+  openedAt: string | null; declineReason: string | null; lastError: string | null; nextReminder: string | null;
+};
+type Activity = { when: string; at: number; text: string; tone?: "warn" | "ok" };
+
+const STATUS: Record<string, { label: string; cls: string }> = {
+  QUEUED: { label: "Sending…", cls: "flag-muted" }, SENT: { label: "Sent", cls: "flag-info" }, OPENED: { label: "Opened", cls: "flag-info" },
+  RESPONDED: { label: "Responded", cls: "flag-ok" }, DECLINED: { label: "Declined", cls: "flag-muted" }, FAILED: { label: "Failed", cls: "flag-warn" },
+  LOGGED: { label: "Saved, not delivered", cls: "flag-warn" },
+};
 
 export function RfqCard(props: {
-  rfq: { id: string; number: string; categoryCode: string; categoryName: string; revision: number; lineCount: number; changedAfterDownload: boolean; downloads: { who: string; when: string; format: string; revision: number }[] };
+  rfq: { id: string; number: string; categoryCode: string; categoryName: string; revision: number; lineCount: number; changedAfterDownload: boolean; changedAfterSend: boolean; downloads: { who: string; when: string; format: string; revision: number }[] };
   suppliers: Supplier[]; recipients: Recipient[]; email: { subject: string; body: string }; quoteDue: string | null; baseUrl: string;
+  reminderHours: number[]; activity: Activity[];
 }) {
-  const { rfq, suppliers, recipients, email, baseUrl } = props;
+  const { rfq, suppliers, recipients, email, baseUrl, activity } = props;
+  const [sending, setSending] = useState(false);
+  const overdue = (r: Recipient) => !!props.quoteDue && new Date(props.quoteDue).getTime() < Date.now() && ["SENT", "OPENED", "LOGGED"].includes(r.status);
   const router = useRouter();
   const [, start] = useTransition();
   const [copied, setCopied] = useState("");
@@ -21,7 +35,7 @@ export function RfqCard(props: {
   const [manual, setManual] = useState({ name: "", email: "", save: true });
   const [sentAt, setSentAt] = useState("");
   const [showSend, setShowSend] = useState(false);
-  const suggested = suppliers.filter((s) => rfq.categoryCode === "ALL" || s.categories.includes(rfq.categoryCode));
+  const suggested = suppliers.filter((s) => s.suggested);
   const others = suppliers.filter((s) => !suggested.includes(s));
   const dl = (format: string, supplierId?: string) => `/api/rfqs/${rfq.id}/download?format=${format}${supplierId ? `&supplierId=${supplierId}` : ""}`;
   const copy = async (text: string, what: string) => { await navigator.clipboard.writeText(text); setCopied(what); setTimeout(() => setCopied(""), 2000); };
@@ -48,13 +62,19 @@ export function RfqCard(props: {
           <div className="text-sm text-muted">Revision {rfq.revision} · {rfq.lineCount} lines</div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a className="btn btn-primary" href={dl("xlsx")}><Icon name="download" size={16} />Download Excel</a>
+          <button className="btn btn-primary" onClick={() => setSending(!sending)} aria-expanded={sending}>Send from {PRODUCT_NAME}</button>
+          <a className="btn btn-secondary" href={dl("xlsx")}><Icon name="download" size={16} />Download Excel</a>
           <a className="btn btn-secondary" href={dl("pdf")}>PDF</a>
           <a className="btn btn-secondary" href={dl("csv")}>CSV</a>
         </div>
       </div>
-      {rfq.changedAfterDownload && (
-        <div className="mt-3 rounded-lg border border-warn-line bg-warn-bg p-2 text-sm text-warn">⚠ This RFQ changed after you downloaded it. Click &quot;Generate / refresh RFQs&quot; above to create Revision {rfq.revision + 1}.</div>
+      {(rfq.changedAfterDownload || rfq.changedAfterSend) && (
+        <div className="mt-3 rounded-lg border border-warn-line bg-warn-bg p-2 text-sm text-warn">⚠ This RFQ changed after you {rfq.changedAfterSend ? "sent" : "downloaded"} it. Click &quot;Generate / refresh RFQs&quot; above to create Revision {rfq.revision + 1}{rfq.changedAfterSend ? ", then send the revision to the same suppliers" : ""}.</div>
+      )}
+      {sending && (
+        <RfqSendPanel rfqId={rfq.id} draft={email} reminderHours={props.reminderHours} onClose={() => setSending(false)}
+          alreadySent={recipients.map((r) => r.supplierId).filter((x): x is string => !!x)}
+          suppliers={suppliers.map(({ id, name, preferred, suggested, servesArea, contacts }) => ({ id, name, preferred, suggested, servesArea, contacts }))} />
       )}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -79,17 +99,27 @@ export function RfqCard(props: {
           <div className="label">Sent to</div>
           {recipients.length === 0 ? <p className="text-sm text-muted">Not sent yet.</p> : (
             <ul className="space-y-1 text-sm">
-              {recipients.map((r) => (
-                <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-paper px-2 py-1">
-                  <span><strong>{r.name}</strong> <span className="text-xs text-muted">{new Date(r.sentAt).toLocaleDateString()} · {r.method === "OUTSIDE" ? `Sent outside ${PRODUCT_NAME} (no open tracking)` : `Sent from ${PRODUCT_NAME}`}</span></span>
-                  <span className="flex items-center gap-2">
-                    <select className="cell-input text-xs" value={r.status} onChange={(e) => start(async () => { await setRecipientStatus(r.id, e.target.value as any); router.refresh(); })}>
-                      <option value="SENT">Sent</option><option value="RESPONDED">Responded</option><option value="DECLINED">Declined</option>
-                    </select>
-                    <button className="text-xs text-navy-700 hover:underline" title="Secure no-login link where this supplier can type prices" onClick={() => copy(`${baseUrl}/q/${r.token}`, r.id)}>{copied === r.id ? "Copied ✓" : "Copy quote-form link"}</button>
-                  </span>
+              {recipients.map((r) => {
+                const st = overdue(r) ? { label: "Overdue", cls: "flag-warn" } : STATUS[r.status] ?? STATUS.SENT;
+                return (
+                <li key={r.id} className="rounded-lg bg-paper px-2 py-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="min-w-0"><strong>{r.name}</strong> <span className={`flag ${st.cls}`}>{st.label}</span>
+                      <span className="block text-xs text-muted">{r.email ? `${r.email} · ` : ""}{new Date(r.sentAt).toLocaleDateString()} · {r.method === "OUTSIDE" ? `Sent outside ${PRODUCT_NAME} (open tracking isn't available)` : `Sent from ${PRODUCT_NAME}`}{r.openedAt ? ` · opened ${new Date(r.openedAt).toLocaleDateString()}` : ""}{r.nextReminder ? ` · next reminder ${r.nextReminder}` : ""}</span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {r.method === "OUTSIDE" && (
+                        <select aria-label={`Status for ${r.name}`} className="cell-input w-auto text-xs" value={r.status} onChange={(e) => start(async () => { await setRecipientStatus(r.id, e.target.value as any); router.refresh(); })}>
+                          <option value="SENT">Sent</option><option value="RESPONDED">Responded</option><option value="DECLINED">Declined</option>
+                        </select>
+                      )}
+                      <button className="text-xs text-navy-700 hover:underline" title="Secure no-login link where this supplier can type prices" onClick={() => copy(`${baseUrl}/q/${r.token}`, r.id)}>{copied === r.id ? "Copied ✓" : "Copy quote-form link"}</button>
+                    </span>
+                  </div>
+                  {r.declineReason && <p className="mt-0.5 text-xs text-muted">Reason: {r.declineReason}</p>}
+                  {r.status === "FAILED" && r.lastError && <p className="mt-0.5 text-xs text-warn">⚠ {r.lastError}</p>}
                 </li>
-              ))}
+              ); })}
             </ul>
           )}
         </div>
@@ -115,10 +145,10 @@ export function RfqCard(props: {
         </div>
       )}
 
-      {rfq.downloads.length > 0 && (
+      {activity.length > 0 && (
         <details className="mt-3 text-xs text-muted">
-          <summary className="cursor-pointer">Download log ({rfq.downloads.length})</summary>
-          <ul className="mt-1">{rfq.downloads.map((d, i) => <li key={i}>{d.when} · {d.who} · {d.format.toUpperCase()} · R{d.revision}</li>)}</ul>
+          <summary className="cursor-pointer">Activity log ({activity.length})</summary>
+          <ul className="mt-1 space-y-0.5">{activity.map((a, i) => <li key={i} className={a.tone === "warn" ? "text-warn" : ""}>{a.when} · {a.text}</li>)}</ul>
         </details>
       )}
     </section>

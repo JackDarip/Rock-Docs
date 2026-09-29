@@ -15,10 +15,13 @@ async function signOut() {
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, company, isAdmin } = await requireCtx();
+  const { user, company, isAdmin, db } = await requireCtx();
+  const unread = await db.notification.count({ where: { userId: user.id, readAt: null } });
   const links = [
     { href: "/", label: "Dashboard", icon: "dashboard" },
     { href: "/projects", label: "Bids", icon: "bids" },
+    { href: "/jobs", label: "Past jobs", icon: "history" },
+    { href: "/notifications", label: "Notifications", icon: "bell", badge: unread },
     { href: "/setup", label: "Company Setup", icon: "setup" },
     ...(isAdmin ? [{ href: "/setup/users", label: "Team", icon: "team" }] : []),
     ...(isPlatformAdmin(user) ? [{ href: "/platform", label: "Tenants", icon: "tenants" }] : []),

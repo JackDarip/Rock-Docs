@@ -21,10 +21,19 @@ export default async function Rfqs({ params }: { params: Promise<{ id: string }>
     db.materialLine.count({ where: { projectId: id, excluded: false } }),
   ]);
   const ids = rfqs.map((r) => r.id);
-  const [recipients, downloads] = await Promise.all([
+  const [recipients, downloads, events] = await Promise.all([
     db.rfqRecipient.findMany({ where: { rfqId: { in: ids } }, orderBy: { sentAt: "asc" } }),
     db.rfqDownload.findMany({ where: { rfqId: { in: ids } }, orderBy: { createdAt: "desc" } }),
+    db.rfqEvent.findMany({ where: { rfqId: { in: ids } }, orderBy: { createdAt: "desc" }, take: 500 }),
   ]);
+  // Suggest suppliers by category and by service area mentioning the job's location.
+  const placeWords = (project.location ?? "").toLowerCase().split(/[,\s]+/).filter((w) => w.length >= 2 && !["and", "the", "of"].includes(w));
+  const servesArea = (area: string | null) => !!area && placeWords.some((w) => area.toLowerCase().split(/[,\s/]+/).includes(w));
+  const nextReminder = (r: (typeof recipients)[number]) => {
+    if (!project.quoteDueAt || r.method === "OUTSIDE" || !["SENT", "OPENED"].includes(r.status)) return null;
+    const next = r.reminderHours.filter((h) => !r.remindersSent.includes(h)).map((h) => project.quoteDueAt!.getTime() - h * 36e5).filter((t) => t > Date.now()).sort()[0];
+    return next ? fmtDateTime(new Date(next)) : null;
+  };
   const users = await prisma.user.findMany({ where: { companyId: company.id }, select: { id: true, name: true } });
   const estimator = users.find((u) => u.id === project.estimatorId)?.name ?? user.name;
   const due = project.quoteDueAt ? fmtDateTime(project.quoteDueAt) : "the date in the RFQ";
@@ -34,7 +43,7 @@ export default async function Rfqs({ params }: { params: Promise<{ id: string }>
 
   // In-app reminders for RFQs sent outside the app: nudge the estimator, not the supplier.
   const soon = project.quoteDueAt && project.quoteDueAt.getTime() - Date.now() < 24 * 36e5;
-  const waiting = soon ? recipients.filter((r) => r.status === "SENT") : [];
+  const waiting = soon ? recipients.filter((r) => r.method === "OUTSIDE" && r.status === "SENT") : [];
 
   return (
     <div className="space-y-4">
@@ -63,10 +72,26 @@ export default async function Rfqs({ params }: { params: Promise<{ id: string }>
             rfq={{
               id: rfq.id, number: rfq.number, categoryCode: rfq.categoryCode, categoryName: cats.get(rfq.categoryCode) ?? rfq.categoryCode, revision: rfq.revision,
               lineCount: rfqLines(rfq).length, changedAfterDownload: dls.length > 0 && hashLines(current) !== rfq.contentHash,
-              downloads: dls.map((d) => ({ who: users.find((u) => u.id === d.userId)?.name ?? "someone", when: fmtDateTime(d.createdAt), format: d.format, revision: d.revision })),
+              changedAfterSend: recipients.some((r) => r.rfqId === rfq.id) && hashLines(current) !== rfq.contentHash,
+              downloads: [],
             }}
-            suppliers={suppliers.map((s) => { const c = s.contacts.find((x) => x.isPrimary) ?? s.contacts[0]; return { id: s.id, name: s.name, email: c?.email ?? null, categories: s.categories, preferred: s.preferred, serviceArea: s.serviceArea }; })}
-            recipients={recipients.filter((r) => r.rfqId === rfq.id).map((r) => ({ id: r.id, name: r.name, email: r.email, method: r.method, status: r.status, sentAt: r.sentAt.toISOString(), token: r.token, supplierId: r.supplierId }))}
+            reminderHours={company.reminderHours}
+            activity={[
+              ...dls.map((d) => ({ at: d.createdAt.getTime(), when: fmtDateTime(d.createdAt), text: `${users.find((u) => u.id === d.userId)?.name ?? "Someone"} downloaded ${d.format.toUpperCase()} (Revision ${d.revision})${d.supplierId ? ` for ${suppliers.find((x) => x.id === d.supplierId)?.name ?? "a supplier"}` : ""}` })),
+              ...events.filter((e) => e.rfqId === rfq.id).map((e) => ({ at: e.createdAt.getTime(), when: fmtDateTime(e.createdAt), text: e.detail ?? e.type, tone: e.type === "FAILED" ? ("warn" as const) : undefined })),
+            ].sort((a, b) => b.at - a.at)}
+            suppliers={suppliers.map((s) => {
+              const c = s.contacts.find((x) => x.isPrimary) ?? s.contacts[0];
+              return {
+                id: s.id, name: s.name, email: c?.email ?? null, categories: s.categories, preferred: s.preferred, serviceArea: s.serviceArea,
+                suggested: rfq.categoryCode === "ALL" || s.categories.includes(rfq.categoryCode), servesArea: servesArea(s.serviceArea),
+                contacts: [...s.contacts].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary)).filter((x) => x.email).map((x) => ({ name: x.name, email: x.email! })),
+              };
+            })}
+            recipients={recipients.filter((r) => r.rfqId === rfq.id).map((r) => ({
+              id: r.id, name: r.name, email: r.email, method: r.method, status: r.status, sentAt: r.sentAt.toISOString(), token: r.token, supplierId: r.supplierId,
+              openedAt: r.openedAt?.toISOString() ?? null, declineReason: r.declineReason, lastError: r.lastError, nextReminder: nextReminder(r),
+            }))}
             email={{ subject: fillTemplate(company.rfqSubject ?? "RFQ {rfq_number}: {category} for {project}", vars), body: [fillTemplate(company.rfqBody, vars), fillTemplate(company.rfqSignature, vars)].filter(Boolean).join("\n\n") }} />
         );
       })}

@@ -78,20 +78,23 @@ export async function markSent(rfqId: string, recipients: unknown[], sentAt: str
       supplierId = s.id;
     }
     const expires = new Date(Math.max(Date.now() + 30 * 864e5, (p?.quoteDueAt?.getTime() ?? 0) + 14 * 864e5));
-    await db.rfqRecipient.create({
+    const rec = await db.rfqRecipient.create({
       data: {
         rfqId, supplierId, name: r.name, email: r.email ?? null, method: "OUTSIDE", status: "SENT",
         sentAt: sentAt ? new Date(sentAt) : new Date(), token: crypto.randomBytes(24).toString("base64url"), tokenExpiresAt: expires, createdById: user.id,
       } as any,
     });
+    await db.rfqEvent.create({ data: { rfqId, recipientId: rec.id, userId: user.id, type: "MARKED_SENT", detail: `${user.name} recorded it as sent to ${r.name}${r.email ? ` (${r.email})` : ""} outside the app` } as any });
   }
   revalidatePath(`/projects/${rfq.projectId}/rfqs`);
   return { ok: true };
 }
 
 export async function setRecipientStatus(id: string, status: "SENT" | "RESPONDED" | "DECLINED") {
-  const { db } = await requireCtx();
-  const r = await db.rfqRecipient.update({ where: { id }, data: { status } });
+  const { db, user } = await requireCtx();
+  if (!["SENT", "RESPONDED", "DECLINED"].includes(status)) return;
+  const r = await db.rfqRecipient.update({ where: { id }, data: { status, ...(status === "RESPONDED" ? { respondedAt: new Date() } : status === "DECLINED" ? { declinedAt: new Date() } : {}) } });
+  await db.rfqEvent.create({ data: { rfqId: r.rfqId, recipientId: r.id, userId: user.id, type: "STATUS", detail: `${user.name} marked ${r.name} as ${status.toLowerCase()}` } as any });
   const rfq = await db.rfq.findUnique({ where: { id: r.rfqId } });
   if (rfq) revalidatePath(`/projects/${rfq.projectId}/rfqs`);
 }

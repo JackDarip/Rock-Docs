@@ -3,11 +3,13 @@ import { storage } from "./storage";
 import { readPdfPages, suggestDocKind } from "./pdftext";
 import { extractBidSchedule, extractSupplierQuote, slicePdf } from "./ai";
 import { similarity } from "./rfq";
+import { deliver } from "./mail";
+import { afterDelivery, sweepReminders } from "./rfqsend";
 
 // Postgres-backed background job queue with retries and progress. Runs inside
 // the web process by default (see instrumentation.ts) or as `npm run worker`.
 
-export type JobType = "PROCESS_DOCUMENT" | "EXTRACT_BID_SCHEDULE" | "EXTRACT_QUOTE";
+export type JobType = "PROCESS_DOCUMENT" | "EXTRACT_BID_SCHEDULE" | "EXTRACT_QUOTE" | "SEND_EMAIL";
 
 export async function enqueue(companyId: string, type: JobType, payload: Record<string, unknown>) {
   return prisma.job.create({ data: { companyId, type, payload: payload as any } });
@@ -131,6 +133,7 @@ export async function runOnce() {
     if (job.type === "PROCESS_DOCUMENT") await processDocument(job.companyId, job.id, payload);
     else if (job.type === "EXTRACT_BID_SCHEDULE") await extractSchedule(job.companyId, payload);
     else if (job.type === "EXTRACT_QUOTE") await extractQuote(job.companyId, payload);
+    else if (job.type === "SEND_EMAIL") { await deliver(payload.messageId); await afterDelivery(job.companyId, payload.messageId, null); }
     await prisma.job.update({ where: { id: job.id }, data: { status: "DONE", progress: 100, error: null } });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
@@ -141,6 +144,7 @@ export async function runOnce() {
         ? { status: "FAILED", error: message }
         : { status: "QUEUED", error: message, runAt: new Date(Date.now() + 2 ** job.attempts * 5000) },
     });
+    if (final && job.type === "SEND_EMAIL") await afterDelivery(job.companyId, payload.messageId, message).catch(() => {});
     if (final && payload?.documentId && job.type === "PROCESS_DOCUMENT") {
       await tenantDb(job.companyId).document.updateMany({ where: { id: payload.documentId }, data: { status: "FAILED", statusDetail: message } });
     }
@@ -153,6 +157,10 @@ export function startWorker(intervalMs = 1500) {
   if (started) return;
   started = true;
   let busy = false;
+  // Supplier and estimator reminders: check every 5 minutes.
+  const sweep = () => sweepReminders().catch((e) => console.error("[reminders]", e));
+  setTimeout(sweep, 10_000);
+  setInterval(sweep, 5 * 60_000);
   setInterval(async () => {
     if (busy) return;
     busy = true;
