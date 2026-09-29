@@ -8,10 +8,11 @@ export default async function ProjectLayout({ children, params }: { children: Re
   const { db } = await requireCtx();
   const p = await db.project.findUnique({ where: { id } });
   if (!p) notFound();
-  const [drafts, unmapped, quotesToReview] = await Promise.all([
+  const [drafts, unmapped, quotesToReview, addendaPending] = await Promise.all([
     db.bidItem.count({ where: { projectId: id, status: "DRAFT" } }),
     db.bidItem.count({ where: { projectId: id, NOT: { id: { in: (await db.bidItemAssembly.findMany({ where: { projectId: id }, select: { bidItemId: true } })).map((m) => m.bidItemId) } } } }),
     db.quote.count({ where: { projectId: id, status: "REVIEW" } }),
+    db.bidItemChange.count({ where: { projectId: id, status: "PENDING" } }),
   ]);
   return (
     <>
@@ -21,7 +22,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
         <div className="text-sm text-muted">{p.bidDueAt ? `Bid due ${fmtDateTime(p.bidDueAt)}` : "Bid due date not set"}{p.owner ? ` · ${p.owner}` : ""} · {p.laborMode === "PREVAILING" ? "Prevailing wage" : "Open shop"}</div>
       </div>
       <div className="mb-6 border-b border-line" />
-      <ProjectTabs id={id} name={p.name} badges={{ review: drafts, estimate: unmapped, quotes: quotesToReview }} />
+      <ProjectTabs id={id} name={p.name} badges={{ review: drafts, estimate: unmapped, quotes: quotesToReview, addenda: addendaPending }} />
       {children}
     </>
   );

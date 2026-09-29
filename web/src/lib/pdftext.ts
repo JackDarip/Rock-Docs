@@ -56,14 +56,17 @@ export async function readPdfPages(data: Uint8Array, onProgress?: (done: number,
     const inBlock = items.filter((it) => it.transform[4] > vp.width * 0.62 && it.transform[5] < vp.height * 0.3);
     const blockText = inBlock.map((it) => it.str.trim());
     const numRe = /^([A-Z]{1,3}[-.]?\d{1,3}(?:\.\d{1,2})?[A-Z]?)$/;
-    const sheetNumber = [...blockText].reverse().find((s) => numRe.test(s)) ?? null;
+    const labelled = /\bSHEET\s*(?:NO\.?|#)?\s*:?\s*([A-Z]{1,3}[-.]?\d{1,3}(?:\.\d{1,2})?[A-Z]?)\b/;
+    const sheetNumber = [...blockText].reverse().find((s) => numRe.test(s))
+      ?? [...blockText].reverse().map((s) => labelled.exec(s)?.[1]).find(Boolean) ?? null;
     const titleCand = inBlock
-      .filter((it) => /[A-Za-z]{3,}/.test(it.str) && !numRe.test(it.str.trim()))
+      .filter((it) => /[A-Za-z]{3,}/.test(it.str) && !numRe.test(it.str.trim()) && !/^\s*(sheet|scale)\b/i.test(it.str))
       .sort((a, b) => Math.abs(b.transform[0]) - Math.abs(a.transform[0]) || b.str.length - a.str.length)[0];
     const scale = /\bscale\s*[:=]?\s*(1"\s*=\s*\d+'?|\d+\s*:\s*\d+|nts|as noted)/i.exec(text)?.[1] ?? null;
     const prefix = sheetNumber?.match(/^[A-Z]/)?.[0];
     pages.push({
-      pageIndex: i - 1, hasText: items.length > 10, text: text.slice(0, 20000),
+      // A page counts as vector text if it has a real amount of text, not just a stray stamp.
+      pageIndex: i - 1, hasText: items.length > 10 || text.replace(/\s+/g, "").length >= 40, text: text.slice(0, 20000),
       sheetNumber, title: titleCand?.str.trim().slice(0, 120) ?? null, scaleText: scale,
       classification: classifyText(`${titleCand?.str ?? ""} ${blockText.join(" ")}`) ?? classifyText(text.slice(0, 3000)),
       discipline: prefix ? DISCIPLINES[prefix] ?? null : null,

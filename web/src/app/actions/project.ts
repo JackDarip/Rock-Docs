@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import Papa from "papaparse";
-import ExcelJS from "exceljs";
 import { prisma } from "@/lib/db";
+import { parseScheduleFile } from "@/lib/schedule";
 import { requireCtx } from "@/lib/auth";
 import { enqueue } from "@/lib/jobs";
 import { estimateAiCost, assertAiBudget, aiEnabled } from "@/lib/ai";
@@ -66,7 +65,7 @@ export async function setDocumentKind(documentId: string, kind: string, addendum
 
 export async function acknowledgeAddendum(documentId: string, acknowledged: boolean) {
   const { db } = await requireCtx();
-  const doc = await db.document.update({ where: { id: documentId }, data: { acknowledged } });
+  const doc = await db.document.update({ where: { id: documentId }, data: { acknowledged, acknowledgedAt: acknowledged ? new Date() : null } });
   revalidatePath(`/projects/${doc.projectId}`, "layout");
 }
 
@@ -111,25 +110,12 @@ export async function importBidSchedule(projectId: string, formData: FormData) {
   const { db } = await projectOr404(projectId);
   const file = formData.get("file") as File | null;
   if (!file?.size) return { ok: false, error: "Choose a file" };
-  const buf = Buffer.from(await file.arrayBuffer());
-  let rows: string[][] = [];
-  if (/\.xlsx$/i.test(file.name)) {
-    const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buf as any);
-    wb.worksheets[0].eachRow((r) => { rows.push((r.values as any[]).slice(1).map((v) => (v && typeof v === "object" ? String(v.result ?? v.text ?? "") : String(v ?? "")).trim())); });
-  } else {
-    rows = Papa.parse<string[]>(buf.toString("utf8"), { skipEmptyLines: true }).data.map((r) => r.map((c) => String(c).trim()));
-  }
-  const hi = rows.findIndex((r) => r.some((c) => /desc/i.test(c)) && r.some((c) => /(unit|uom)/i.test(c)));
-  if (hi < 0) return { ok: false, error: "Couldn't find a header row with Description and Unit columns" };
-  const h = rows[hi].map((c) => c.toLowerCase());
-  const col = (...keys: string[]) => h.findIndex((c) => keys.some((k) => c.includes(k)));
-  const ci = { item: col("item", "no", "#"), desc: col("desc"), unit: col("unit", "uom"), qty: col("qty", "quant"), spec: col("spec", "section") };
+  const parsed = await parseScheduleFile(Buffer.from(await file.arrayBuffer()), file.name);
+  if (!parsed.ok) return parsed;
   const existing = await db.bidItem.count({ where: { projectId } });
-  const data = rows.slice(hi + 1).filter((r) => r[ci.desc]).map((r, i) => ({
-    projectId, itemNumber: (ci.item >= 0 ? r[ci.item] : "") || String(existing + i + 1), description: r[ci.desc],
-    unit: (ci.unit >= 0 ? r[ci.unit] : "") || "LS", quantity: ci.qty >= 0 && r[ci.qty] ? Number(r[ci.qty].replace(/[,\s]/g, "")) || null : null,
-    specSection: ci.spec >= 0 ? r[ci.spec] || null : null, source: "BID_SCHEDULE", sourceNote: `Imported from ${file.name}`,
+  const data = parsed.rows.map((r, i) => ({
+    projectId, itemNumber: r.itemNumber, description: r.description, unit: r.unit, quantity: r.quantity,
+    specSection: r.specSection, source: "BID_SCHEDULE", sourceNote: `Imported from ${file.name}`,
     status: "DRAFT", confidence: "HIGH", sortOrder: existing + i,
   }));
   await db.bidItem.createMany({ data: data as any });

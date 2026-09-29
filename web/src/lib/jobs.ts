@@ -4,6 +4,7 @@ import { readPdfPages, suggestDocKind } from "./pdftext";
 import { extractBidSchedule, extractSupplierQuote, slicePdf } from "./ai";
 import { similarity } from "./rfq";
 import { bbox, packTin, parseLandXml } from "./landxml";
+import { diffSchedule } from "./addenda";
 import { newKey } from "./storage";
 import { deliver } from "./mail";
 import { afterDelivery, sweepReminders } from "./rfqsend";
@@ -11,7 +12,7 @@ import { afterDelivery, sweepReminders } from "./rfqsend";
 // Postgres-backed background job queue with retries and progress. Runs inside
 // the web process by default (see instrumentation.ts) or as `npm run worker`.
 
-export type JobType = "PROCESS_DOCUMENT" | "EXTRACT_BID_SCHEDULE" | "EXTRACT_QUOTE" | "SEND_EMAIL";
+export type JobType = "PROCESS_DOCUMENT" | "EXTRACT_BID_SCHEDULE" | "EXTRACT_QUOTE" | "SEND_EMAIL" | "EXTRACT_ADDENDUM";
 
 export async function enqueue(companyId: string, type: JobType, payload: Record<string, unknown>) {
   return prisma.job.create({ data: { companyId, type, payload: payload as any } });
@@ -28,6 +29,12 @@ async function claim() {
 }
 
 const setProgress = (id: string, progress: number) => prisma.job.update({ where: { id }, data: { progress } });
+
+/** "Addendum No. 2", "ADDENDUM #2", "Addendum-2.pdf" → 2 */
+function addendumNo(text: string) {
+  const m = /addend(?:um|a)[\s_-]*(?:no\.?|number|#)?[\s_-]*(\d{1,3})\b/i.exec(text);
+  return m ? Number(m[1]) : null;
+}
 
 async function processDocument(companyId: string, jobId: string, p: { documentId: string }) {
   const db = tenantDb(companyId);
@@ -54,6 +61,7 @@ async function processDocument(companyId: string, jobId: string, p: { documentId
       data: {
         pageCount, hasText: textPages > 0, status: "READY", suggestedKind: suggested,
         kind: doc.kindConfirmed ? doc.kind : suggested,
+        ...(suggested === "ADDENDUM" && doc.addendumNumber == null ? { addendumNumber: addendumNo(`${doc.filename} ${pages.slice(0, 1).map((x) => x.text).join(" ")}`) } : {}),
         statusDetail: textPages === pageCount ? "Vector PDF: text read directly"
           : textPages === 0 ? "Scanned PDF: no embedded text (AI vision needed for extraction)"
           : `${pageCount - textPages} of ${pageCount} pages are scanned`,
@@ -111,6 +119,18 @@ async function extractSchedule(companyId: string, p: { documentId: string; pages
   }
 }
 
+async function extractAddendum(companyId: string, p: { documentId: string }) {
+  const db = tenantDb(companyId);
+  const doc = await db.document.findUnique({ where: { id: p.documentId } });
+  if (!doc) return;
+  await db.document.update({ where: { id: doc.id }, data: { statusDetail: "Reading the revised bid schedule…" } });
+  const res = await extractBidSchedule(companyId, await slicePdf(await storage.get(companyId, doc.storageKey)), doc.id);
+  const n = await diffSchedule(db, doc.projectId, doc.id, res.items.map((it) => ({
+    itemNumber: it.item_number, description: it.description, unit: it.unit, quantity: it.quantity, specSection: it.spec_section,
+  })), doc.uploadedById);
+  await db.document.update({ where: { id: doc.id }, data: { statusDetail: res.items.length ? `Found ${res.items.length} bid items; ${n} differ from the current schedule` : "No bid schedule found in this addendum" } });
+}
+
 async function extractQuote(companyId: string, p: { documentId: string; quoteId: string }) {
   const db = tenantDb(companyId);
   const doc = await db.document.findUnique({ where: { id: p.documentId } });
@@ -157,6 +177,7 @@ export async function runOnce() {
     if (job.type === "PROCESS_DOCUMENT") await processDocument(job.companyId, job.id, payload);
     else if (job.type === "EXTRACT_BID_SCHEDULE") await extractSchedule(job.companyId, payload);
     else if (job.type === "EXTRACT_QUOTE") await extractQuote(job.companyId, payload);
+    else if (job.type === "EXTRACT_ADDENDUM") await extractAddendum(job.companyId, payload);
     else if (job.type === "SEND_EMAIL") { await deliver(payload.messageId); await afterDelivery(job.companyId, payload.messageId, null); }
     await prisma.job.update({ where: { id: job.id }, data: { status: "DONE", progress: 100, error: null } });
   } catch (e) {
