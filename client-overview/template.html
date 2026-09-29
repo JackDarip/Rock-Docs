@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{PRODUCT_NAME}} — {{DOC_TITLE}}</title>
+<style>
+@font-face{font-family:"Inter";src:url("{{FONT_DIR}}/inter-latin-wght-normal.woff2") format("woff2");font-weight:100 900;font-style:normal}
+@font-face{font-family:"Fraunces";src:url("{{FONT_DIR}}/fraunces-latin-wght-normal.woff2") format("woff2");font-weight:100 900;font-style:normal}
+@font-face{font-family:"Fraunces";src:url("{{FONT_DIR}}/fraunces-latin-wght-italic.woff2") format("woff2");font-weight:100 900;font-style:italic}
+
+:root{
+  --deep:#0E2830;
+  --deep-2:#14363F;
+  --teal:#1F5C63;
+  --teal-2:#2F7F86;
+  --teal-tint:#E6F0F0;
+  --ink:#1E2B33;
+  --muted:#5D6A72;
+  --line:#DCD8CE;
+  --stone:#F5F3EE;
+  --stone-2:#ECE8DF;
+  --amber:#C98408;
+  --amber-tint:#FFF3D6;
+  --green:#2B7A56;
+  --green-tint:#E3F2EA;
+}
+
+@page{
+  size:8.5in 11in;
+  margin:0.7in 0.72in 0.8in 0.72in;
+  @bottom-left{content:"{{PRODUCT_NAME|css}}  ·  {{DOC_TITLE|css}}";font-family:"Inter";font-size:7.5pt;color:#7A868D;letter-spacing:.02em}
+  @bottom-right{content:"Prepared for {{CLIENT_NAME|css}}  ·  " counter(page);font-family:"Inter";font-size:7.5pt;color:#7A868D;letter-spacing:.02em}
+}
+@page :first{
+  margin:0;
+  @bottom-left{content:none}
+  @bottom-right{content:none}
+}
+
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;font-family:"Inter",sans-serif;font-size:9.1pt;line-height:1.5;color:var(--ink);font-feature-settings:"cv11","ss03"}
+p{margin:0 0 .6em}
+ul{margin:0;padding:0;list-style:none}
+b,strong{font-weight:650}
+
+/* ---------- cover ---------- */
+.cover{position:relative;width:8.5in;height:11in;background:var(--deep);color:#fff;overflow:hidden;break-after:page}
+.cover svg.contours{position:absolute;inset:0;width:100%;height:100%}
+.cover .fade{position:absolute;inset:0;background:
+  linear-gradient(100deg,var(--deep) 0%,rgba(14,40,48,.92) 38%,rgba(14,40,48,0) 78%),
+  linear-gradient(0deg,var(--deep) 0%,rgba(14,40,48,0) 30%)}
+.cover .inner{position:absolute;left:.85in;right:.85in;top:0;bottom:0;display:flex;flex-direction:column}
+.cover .top{padding-top:.9in;font-size:8.5pt;letter-spacing:.22em;text-transform:uppercase;color:#8FBFC2;font-weight:600}
+.cover .mid{margin-top:2.55in}
+.cover h1{font-family:"Fraunces",serif;font-weight:600;font-size:64pt;line-height:1;margin:0;letter-spacing:-.02em}
+.cover .tag{font-family:"Fraunces",serif;font-style:italic;font-weight:400;font-size:17pt;color:#CFE3E4;margin:.22in 0 0}
+.cover .rule{width:.9in;height:3px;background:var(--teal-2);margin:.42in 0 .36in}
+.cover .sub{font-size:16pt;font-weight:500;line-height:1.3;max-width:4.6in;color:#fff}
+.cover .sub small{display:block;font-size:10pt;font-weight:400;color:#B7CFD1;margin-top:.12in;line-height:1.5}
+.cover .meta{margin-top:auto;padding-bottom:.85in;display:grid;grid-template-columns:auto auto auto;gap:0 .55in;justify-content:start}
+.cover .meta div{font-size:8pt;letter-spacing:.14em;text-transform:uppercase;color:#7FA9AC;font-weight:600}
+.cover .meta span{display:block;margin-top:.04in;font-size:11pt;letter-spacing:0;text-transform:none;color:#fff;font-weight:500}
+
+/* ---------- page furniture ---------- */
+section.page{break-before:page}
+.eyebrow{font-size:8pt;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-2);font-weight:650;margin:0 0 .09in}
+h1.title{text-wrap:balance;font-family:"Fraunces",serif;font-weight:600;font-size:23pt;line-height:1.1;letter-spacing:-.015em;margin:0 0 .13in;color:var(--deep)}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:13.5pt;line-height:1.2;margin:.2in 0 .08in;color:var(--deep);letter-spacing:-.005em}
+h3{font-size:9.8pt;font-weight:650;margin:0 0 .03in;color:var(--deep)}
+.lead{font-size:10.3pt;line-height:1.5;color:#2A3942;margin:0 0 .16in}
+.small{font-size:8.3pt;color:var(--muted);line-height:1.45}
+.note{font-size:7.8pt;color:var(--muted);font-style:italic}
+
+/* ---------- cards & callouts ---------- */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:.14in;margin:.05in 0 .2in}
+.card{border:1px solid var(--line);border-radius:7px;padding:.12in .14in .1in;background:#fff;break-inside:avoid}
+.card .n{display:inline-block;width:.27in;height:.27in;border-radius:50%;background:var(--teal);color:#fff;font-weight:650;font-size:9pt;line-height:.27in;text-align:center;margin-bottom:.07in}
+.card h3{font-family:"Fraunces",serif;font-size:12pt;font-weight:600;margin-bottom:.05in}
+.card p{margin:0;font-size:8.5pt;color:#34434C;line-height:1.46}
+
+.callout{background:var(--stone);border-left:4px solid var(--teal);border-radius:0 6px 6px 0;padding:.1in .16in;margin:.12in 0;break-inside:avoid}
+.callout.amber{background:var(--amber-tint);border-left-color:var(--amber)}
+.callout.green{background:var(--green-tint);border-left-color:var(--green)}
+.callout h3{margin-bottom:.04in}
+.callout p:last-child,.callout ul:last-child{margin-bottom:0}
+
+.tick li,.dash li{position:relative;padding-left:.2in;margin:0 0 .045in;break-inside:avoid}
+.tick li::before{content:"";position:absolute;left:0;top:.34em;width:.11in;height:.06in;border-left:2px solid var(--teal-2);border-bottom:2px solid var(--teal-2);transform:rotate(-45deg) translate(1px,-2px)}
+.dash li::before{content:"";position:absolute;left:.02in;top:.62em;width:.1in;height:2px;background:var(--amber)}
+.tick.amber li::before{border-color:var(--amber)}
+
+/* ---------- what you get strip ---------- */
+.gets{display:grid;grid-template-columns:repeat(5,1fr);gap:.1in;margin:.1in 0 .15in}
+.gets div{border-top:3px solid var(--teal);background:var(--stone);padding:.09in .1in .1in;border-radius:0 0 5px 5px;font-size:8.3pt;line-height:1.4;break-inside:avoid}
+.gets b{display:block;font-size:9pt;color:var(--deep);margin-bottom:.03in}
+
+/* ---------- workflow ---------- */
+.flow{width:100%;border-collapse:collapse;margin-top:.06in}
+.flow th{font-size:7.6pt;letter-spacing:.14em;text-transform:uppercase;text-align:left;color:var(--muted);padding:0 .1in .07in .5in;font-weight:650}
+.flow th:first-child{padding-left:0}
+.flow td{vertical-align:top;padding:.1in .12in .1in .12in;border-top:1px solid var(--line);font-size:8.9pt;line-height:1.45}
+.flow tr{break-inside:avoid}
+.flow td.num{width:.42in;padding-left:0}
+.flow td.num span{display:block;width:.3in;height:.3in;border-radius:50%;background:var(--deep);color:#fff;font-weight:650;font-size:9pt;line-height:.3in;text-align:center}
+.flow td.who b{display:block;color:var(--deep);font-size:9.6pt;margin-bottom:.02in}
+.flow td.ai{background:var(--stone);border-left:1px solid var(--line)}
+.rule-strip{display:flex;align-items:stretch;margin:.18in 0 0;border-radius:7px;overflow:hidden;break-inside:avoid;font-size:9pt}
+.rule-strip div{flex:1;padding:.12in .14in;color:#fff;font-weight:600}
+.rule-strip div small{display:block;font-weight:400;font-size:7.9pt;margin-top:.02in;opacity:.9}
+.rule-strip .a{background:var(--amber)}
+.rule-strip .b{background:var(--teal)}
+.rule-strip .c{background:var(--green)}
+
+/* ---------- modules ---------- */
+.module{margin:0 0 .16in;break-inside:auto}
+.module-head{display:flex;align-items:center;gap:.13in;background:var(--deep);color:#fff;border-radius:6px;padding:.08in .15in;break-after:avoid}
+.module-head .mn{font-family:"Fraunces",serif;font-size:19pt;font-weight:600;color:#7FC0C4;line-height:1}
+.module-head h2{margin:0;color:#fff;font-size:12pt}
+.module-head p{margin:0;font-size:7.9pt;color:#B7CFD1;line-height:1.3}
+.module-body{padding:.09in .04in 0}
+.caps{display:grid;grid-template-columns:1fr 1fr;gap:0 .28in}
+.cap{margin:0 0 .08in;break-inside:avoid}
+.cap h3{font-size:8.9pt}
+.cap p{margin:0;font-size:8.3pt;line-height:1.43;color:#34434C}
+.tag-amber,.tag-green,.tag-teal{display:inline-block;font-size:6.9pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.01in .06in;border-radius:20px;vertical-align:.08em;margin-left:.03in}
+.tag-amber{background:var(--amber-tint);color:#8A5A00;border:1px solid #E9C36E}
+.tag-green{background:var(--green-tint);color:var(--green);border:1px solid #A9D6BE}
+.tag-teal{background:var(--teal-tint);color:var(--teal);border:1px solid #B5D3D5}
+
+.ladder{margin:.02in 0 .1in;break-inside:avoid}
+.module.newpage{break-before:page}
+.ladder .rung{display:flex;gap:.12in;align-items:flex-start;padding:.06in .12in;border-radius:5px;margin-bottom:.04in;font-size:8.2pt;line-height:1.4}
+.ladder .rung .k{flex:0 0 1.15in;font-weight:700;font-size:7.6pt;letter-spacing:.06em;text-transform:uppercase;padding-top:.02in}
+.ladder .r1{background:var(--green-tint);border:1px solid #A9D6BE}.ladder .r1 .k{color:var(--green)}
+.ladder .r2{background:var(--teal-tint);border:1px solid #B5D3D5}.ladder .r2 .k{color:var(--teal)}
+.ladder .r3{background:var(--amber-tint);border:1px solid #E9C36E}.ladder .r3 .k{color:#8A5A00}
+
+/* ---------- trust ---------- */
+table.qa{width:100%;border-collapse:collapse;margin:.06in 0 .16in}
+table.qa td{padding:.06in .1in;border-top:1px solid var(--line);vertical-align:top;font-size:8.5pt;line-height:1.43}
+table.qa tr{break-inside:avoid}
+table.qa td:first-child{width:2.05in;font-weight:650;color:var(--deep)}
+table.qa tr:last-child td{border-bottom:1px solid var(--line)}
+.mocks{display:grid;grid-template-columns:1.32fr 1fr;gap:.16in;margin:.08in 0 .1in;break-inside:avoid}
+.mock{border:1px solid #C9D3D6;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.mock .bar{background:var(--stone-2);padding:.05in .1in;display:flex;align-items:center;gap:.05in;font-size:7.4pt;color:var(--muted);border-bottom:1px solid #D9D5CA}
+.mock .bar i{display:block;width:.07in;height:.07in;border-radius:50%;background:#C9C4B8}
+.mock .bar span{margin-left:.06in;font-weight:600;color:#4B5860}
+.mock .body{padding:.09in .1in}
+.mock table{width:100%;border-collapse:collapse;font-size:7.2pt}
+.mock th{text-align:left;font-size:6.4pt;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.03in .04in;border-bottom:1px solid var(--line);font-weight:650}
+.mock td:nth-child(2){white-space:nowrap}
+.mock td{padding:.045in .04in;border-bottom:1px solid #EFECE5;vertical-align:middle}
+.mock tr.flag td{background:#FFFAEB}
+.dot{display:inline-block;width:.075in;height:.075in;border-radius:50%;margin-right:.04in;vertical-align:-.005in}
+.dot.g{background:var(--green)}.dot.a{background:var(--amber)}
+.pill{display:inline-block;font-size:6.3pt;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:20px;padding:.008in .055in}
+.pill.ok{background:var(--green-tint);color:var(--green)}
+.pill.rev{background:var(--amber-tint);color:#8A5A00}
+.pill.ai{background:#F3E9C9;color:#7A5200}
+.calc{font-size:7.5pt;line-height:1.5}
+.calc .row{padding:.045in 0;border-bottom:1px dashed #E2DED4}
+.calc .row:last-child{border-bottom:none}
+.calc .lab{font-weight:650;color:var(--deep)}
+.calc .src{display:inline-block;font-size:6.3pt;font-weight:700;letter-spacing:.03em;border-radius:20px;padding:.005in .05in;margin-left:.03in;vertical-align:.02em}
+.calc .src.v{background:var(--green-tint);color:var(--green)}
+.calc .src.q{background:var(--teal-tint);color:var(--teal)}
+.calc .src.u{background:var(--amber-tint);color:#8A5A00}
+.mock-cap{font-size:7.6pt;color:var(--muted);margin:.04in 0 0;line-height:1.4}
+
+/* ---------- inputs ---------- */
+.people{display:grid;grid-template-columns:repeat(5,1fr);gap:.09in;margin:.06in 0 .1in}
+.people div{border:1px solid var(--line);border-radius:6px;padding:.09in .09in .08in;font-size:8pt;line-height:1.4;break-inside:avoid;background:#fff}
+.people b{display:block;color:var(--deep);font-size:8.7pt;margin-bottom:.03in;line-height:1.25}
+.tier{display:flex;align-items:baseline;gap:.1in;margin:.16in 0 .05in;break-after:avoid}
+.tier .badge{font-size:7.4pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--teal);padding:.03in .09in;border-radius:20px;white-space:nowrap}
+.tier.t2 .badge{background:var(--deep-2)}
+.tier.t3 .badge{background:#6B7B82}
+.tier h2{margin:0;font-size:13pt}
+.tier.newpage{break-before:page;margin-top:0}
+.tier .when{font-size:8.3pt;color:var(--muted);margin-left:auto;white-space:nowrap}
+table.inputs{width:100%;border-collapse:collapse;font-size:8pt;line-height:1.4}
+table.inputs th{background:var(--deep);color:#fff;text-align:left;font-size:7pt;letter-spacing:.11em;text-transform:uppercase;padding:.06in .08in;font-weight:650}
+table.inputs thead{display:table-header-group}
+table.inputs td{padding:.055in .08in;border-bottom:1px solid var(--line);vertical-align:top}
+table.inputs tr{break-inside:avoid}
+table.inputs tr:nth-child(even) td{background:#FAF9F6}
+table.inputs{table-layout:fixed}
+table.inputs td:first-child{width:1.5in;font-weight:650;color:var(--deep)}
+table.inputs td:nth-child(3){width:1.3in;color:#3F4E57}
+table.inputs td:nth-child(4){width:1in;color:#3F4E57}
+table.inputs td:nth-child(5){width:.5in;text-align:center;font-weight:650;color:var(--teal)}
+table.inputs th:nth-child(5){text-align:center}
+table.inputs th:first-child{width:1.5in}table.inputs th:nth-child(3){width:1.3in}table.inputs th:nth-child(4){width:1in}table.inputs th:nth-child(5){width:.5in}
+.decisions{display:grid;grid-template-columns:1fr 1fr;gap:0 .3in}
+
+/* ---------- roadmap ---------- */
+.chev{display:flex;margin:.08in 0 .16in;break-inside:avoid}
+.chev div{flex:1;background:var(--deep);color:#fff;padding:.09in .1in .09in .22in;font-size:7.8pt;font-weight:650;line-height:1.25;clip-path:polygon(0 0,calc(100% - .14in) 0,100% 50%,calc(100% - .14in) 100%,0 100%,.14in 50%);margin-right:-.03in}
+.chev div:first-child{clip-path:polygon(0 0,calc(100% - .14in) 0,100% 50%,calc(100% - .14in) 100%,0 100%);padding-left:.12in}
+.chev div small{display:block;font-weight:400;color:#9FC5C8;font-size:7pt;margin-top:.015in}
+.chev div:nth-child(2){background:#164048}.chev div:nth-child(3){background:#1B4B54}.chev div:nth-child(4){background:var(--teal)}.chev div:nth-child(5){background:#2B747B}.chev div:nth-child(6){background:#3B8A90}
+table.road{width:100%;border-collapse:collapse;font-size:8.1pt;line-height:1.4}
+table.road th{background:var(--deep);color:#fff;text-align:left;font-size:7pt;letter-spacing:.11em;text-transform:uppercase;padding:.06in .08in;font-weight:650}
+table.road td{padding:.06in .08in;border-bottom:1px solid var(--line);vertical-align:top}
+table.road tr{break-inside:avoid}
+table.road td:first-child{width:1.45in;font-weight:650;color:var(--deep)}
+table.road td:first-child small{display:block;font-weight:500;color:var(--muted);font-size:7.5pt;margin-top:.02in}
+table.road td:nth-child(2){width:2.1in}
+table.road td:nth-child(3){width:1.75in}
+
+/* ---------- rollout ---------- */
+.steps5{display:grid;grid-template-columns:repeat(5,1fr);gap:.09in;margin:.08in 0 .14in}
+.steps5 div{border:1px solid var(--line);border-top:4px solid var(--teal);border-radius:0 0 6px 6px;padding:.09in .09in .08in;font-size:8.1pt;line-height:1.42;background:#fff;break-inside:avoid}
+.steps5 div:nth-child(3){border-top-color:var(--amber)}
+.steps5 b{display:block;color:var(--deep);font-size:9pt;margin-bottom:.03in;line-height:1.25}
+.steps5 em{display:block;font-style:normal;font-size:6.9pt;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-2);font-weight:700;margin-bottom:.03in}
+.steps5 div:nth-child(3) em{color:#8A5A00}
+.checklist{margin:.04in 0 0}
+.checklist li{display:flex;gap:.12in;align-items:flex-start;padding:.045in 0;border-bottom:1px solid var(--line);font-size:8.8pt;line-height:1.4;break-inside:avoid}
+.checklist li::before{content:"";flex:0 0 .16in;height:.16in;border:1.5px solid var(--teal);border-radius:3px;margin-top:.02in}
+.checklist li span{color:var(--muted);font-size:8.1pt}
+.closing{margin-top:.14in;background:var(--deep);color:#fff;border-radius:8px;padding:.18in .22in;break-inside:avoid;display:flex;justify-content:space-between;align-items:center;gap:.3in}
+.closing h3{font-family:"Fraunces",serif;font-size:14pt;color:#fff;font-weight:600;margin:0 0 .03in}
+.closing p{margin:0;font-size:8.8pt;color:#C6DADB}
+.closing .who{text-align:right;font-size:8.5pt;color:#9FC5C8;white-space:nowrap}
+.closing .who b{display:block;color:#fff;font-size:10pt}
+</style>
+</head>
+<body>
+
+<!-- ============================ COVER ============================ -->
+<div class="cover">
+  {{CONTOUR_SVG}}
+  <div class="fade"></div>
+  <div class="inner">
+    <div class="top">Platform Overview</div>
+    <div class="mid">
+      <h1>{{PRODUCT_NAME}}</h1>
+      <p class="tag">{{TAGLINE}}</p>
+      <div class="rule"></div>
+      <div class="sub">{{DOC_TITLE}}
+        <small>What we are building for heavy civil estimating, and what we need from your team to make it a natural part of every bid.</small>
+      </div>
+    </div>
+    <div class="meta">
+      <div>Prepared for<span>{{CLIENT_NAME}}</span></div>
+      <div>Prepared by<span>{{PREPARED_BY}}</span></div>
+      <div>Date<span>{{DATE}}</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ 01 THE IDEA ============================ -->
+<section class="page">
+  <p class="eyebrow">01 · The idea</p>
+  <h1 class="title">Estimating you can trust, built on your own numbers.</h1>
+  <p class="lead">{{PRODUCT_NAME}} is an estimating platform for heavy civil and sitework contractors. It drafts the slowest, most error-prone parts of a bid (reading the plan set, pulling quantities, building material lists, chasing supplier prices). Your estimator then confirms every number. The result is an estimate built from <b>your</b> labor, equipment, production rates, and supplier quotes. Not industry averages.</p>
+
+  <div class="cards">
+    <div class="card"><span class="n">1</span><h3>Your numbers, not ours</h3><p>{{PRODUCT_NAME}} ships empty by design. No built-in rates, no seeded price database, no &ldquo;typical&rdquo; production. Every figure in an estimate is entered, uploaded, or confirmed by your team.</p></div>
+    <div class="card"><span class="n">2</span><h3>AI assists. You verify.</h3><p>AI drafts quantities, materials, and prices. Nothing reaches an estimate until an estimator confirms it, and every AI-suggested value is labeled as such until then.</p></div>
+    <div class="card"><span class="n">3</span><h3>Every number is traceable</h3><p>Each quantity links to the document, sheet, and location it came from. Each price shows its source and date. Any line can explain its own math.</p></div>
+  </div>
+
+  <h2>What your team gets</h2>
+  <div class="gets">
+    <div><b>One home for your costs</b>Labor, equipment, materials, suppliers, and production rates, refined anytime.</div>
+    <div><b>A reviewed takeoff</b>Drafted from the owner&rsquo;s own bid schedule and plan tables, confirmed by you.</div>
+    <div><b>Supplier-ready RFQs</b>Numbered, branded, and grouped by supplier category, with quotes compared side by side.</div>
+    <div><b>Bids that match the form</b>Estimates organized by the owner&rsquo;s bid items, exported in their exact order.</div>
+    <div><b>Sharper every job</b>Actual costs feed back to calibrate future estimates, with your approval.</div>
+  </div>
+
+  <div class="callout">
+    <h3>Who it is built for</h3>
+    <p style="margin:0">Estimators bidding earthwork, utilities, paving, and structures (bridges) on federal, state DOT, county/city, and private work. Here, precision beats speed. If the numbers don&rsquo;t match reality, the tool doesn&rsquo;t get used, so every design decision starts with accuracy.</p>
+  </div>
+
+  <div class="callout green">
+    <h3>Fits how you already work</h3>
+    <p style="margin:0">Every file {{PRODUCT_NAME}} generates can be downloaded. Send supplier RFQs from inside the app <i>or</i> from your own email to anyone you choose, and quotes come back into the estimate either way. Your private workspace lives at <b>{{WORKSPACE_URL}}</b>, walled off from every other company.</p>
+  </div>
+</section>
+
+<!-- ============================ 02 WORKFLOW ============================ -->
+<section class="page">
+  <p class="eyebrow">02 · The workflow</p>
+  <h1 class="title">One bid, start to finish.</h1>
+  <p class="lead">The whole product exists to deliver one loop: from the owner&rsquo;s bid package to a defensible bid, with supplier prices in between. Here is what your estimator does, and what {{PRODUCT_NAME}} does, at each step.</p>
+
+  <table class="flow">
+    <thead><tr><th style="width:.42in"></th><th>Your estimator</th><th>{{PRODUCT_NAME}}</th></tr></thead>
+    <tbody>
+      <tr><td class="num"><span>1</span></td>
+        <td class="who"><b>Set up your costs once</b>Enter or upload labor, equipment, materials, suppliers, and production rates. Refine anytime.</td>
+        <td class="ai">Turns plain-language answers (&ldquo;how many cubic yards can your crew place in a day?&rdquo;) into the calculations behind every estimate.</td></tr>
+      <tr><td class="num"><span>2</span></td>
+        <td class="who"><b>Upload the bid package</b>Plan set, bid form, specifications, geotech report, addenda, and optional CAD exchange files.</td>
+        <td class="ai">Splits the plan set into an indexed, searchable set of sheets and tags each document, working in the background while your team keeps going.</td></tr>
+      <tr><td class="num"><span>3</span></td>
+        <td class="who"><b>Review the draft takeoff</b>Confirm or correct every quantity against the plan sheet.</td>
+        <td class="ai">Extracts quantities from the bid schedule, plan tables, and (flagged for extra scrutiny) the drawings themselves.</td></tr>
+      <tr><td class="num"><span>4</span></td>
+        <td class="who"><b>Build the estimate</b>Map bid items to your assemblies and adjust anything for this specific job.</td>
+        <td class="ai">Calculates labor, equipment, and materials from your data, showing the math and how much of the estimate is verified.</td></tr>
+      <tr><td class="num"><span>5</span></td>
+        <td class="who"><b>Generate the material list &amp; RFQs</b>Choose which suppliers get which packages.</td>
+        <td class="ai">Consolidates every material across bid items and builds numbered, supplier-ready RFQ spreadsheets grouped by category.</td></tr>
+      <tr><td class="num"><span>6</span></td>
+        <td class="who"><b>Send and collect prices</b>Send from {{PRODUCT_NAME}} or from your own email. Prices come back as a filled spreadsheet, an online form, a supplier PDF, or pasted email text.</td>
+        <td class="ai">Matches every returned price to the right line, compares suppliers side by side, and flags gaps, exclusions, and expired quotes.</td></tr>
+      <tr><td class="num"><span>7</span></td>
+        <td class="who"><b>Submit, then learn</b>Produce the bid documents. After the job, enter actual costs.</td>
+        <td class="ai">Generates the bid summary and a bid form in the owner&rsquo;s exact order, then compares estimated to actual to suggest calibrations you approve.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule-strip">
+    <div class="a">AI drafts<small>Quantities, materials, and prices arrive labeled as suggestions.</small></div>
+    <div class="b">You review<small>Each item shows its source, confidence, and sheet link.</small></div>
+    <div class="c">Then it counts<small>Only confirmed values flow into the estimate.</small></div>
+  </div>
+  <p class="note" style="margin-top:.1in">The rule that runs through every step: nothing flows into an estimate silently.</p>
+</section>
+
+<!-- ============================ 03 CAPABILITIES ============================ -->
+<section class="page">
+  <p class="eyebrow">03 · Capabilities</p>
+  <h1 class="title">What we are building.</h1>
+  <p class="lead">Six connected modules. Your team can start with what it has and improve over time. Nothing is locked, everything autosaves, and every screen explains itself in plain language.</p>
+
+  <!-- Module 1 -->
+  <div class="module">
+    <div class="module-head"><span class="mn">1</span><div><h2>Company Setup: &ldquo;Make It Yours&rdquo;</h2><p>Set your costs once. Refine them anytime. Always one click away in the main menu.</p></div></div>
+    <div class="module-body">
+      <div class="caps">
+        <div class="cap"><h3>Company basics</h3><p>Logo, accent color, markup, overhead, sales tax, project types bid, bonding and insurance approach, and your standard RFQ email.</p></div>
+        <div class="cap"><h3>Labor</h3><p>Roles with base wage, burden %, and a separate prevailing / Davis-Bacon rate. Or upload a wage determination and review the extraction.</p></div>
+        <div class="cap"><h3>Equipment</h3><p>Ownership, operating, and standby cost per hour plus mobilization per move. Or upload an equipment cost report and review the extraction.</p></div>
+        <div class="cap"><h3>Materials &amp; supplier directory</h3><p>Unit cost, density, waste %, and quote-expiry warnings. Supplier and subcontractor directories by category and service area, with Excel/CSV import.</p></div>
+        <div class="cap"><h3>Production rates</h3><p>Answer in plain language (&ldquo;how many CY can your crew place and compact in 8 hours?&rdquo;) and pick the crew. We handle the formulas.</p></div>
+        <div class="cap"><h3>Soil &amp; material behavior</h3><p>Your own swell and shrink percentages by soil type, with a before/after volume visual.</p></div>
+        <div class="cap"><h3>Assemblies</h3><p>Reusable work packages (say, &ldquo;8-inch sewer, 8 ft deep&rdquo;) tying materials, crew, equipment, and production together, with a live cost per unit.</p></div>
+        <div class="cap"><h3>Email sending <span class="tag-teal">Optional</span></h3><p>Send RFQs from {{PRODUCT_NAME}}, your company domain, or each estimator&rsquo;s own Google or Microsoft mailbox.</p></div>
+      </div>
+      <p class="small" style="margin:0 0 .04in"><b>Every step is skippable, saveable, and re-editable.</b> A completeness score shows what is left, and estimates flag any line that relies on an unverified value.</p>
+    </div>
+  </div>
+
+  <!-- Module 2 -->
+  <div class="module">
+    <div class="module-head"><span class="mn">2</span><div><h2>Plan Room &amp; Takeoff: &ldquo;Upload the Bid Package&rdquo;</h2><p>From a 500-sheet plan set to a reviewed quantity takeoff, with every number traceable.</p></div></div>
+    <div class="module-body">
+      <div class="caps">
+        <div class="cap"><h3>Upload the whole package</h3><p>Plan sets of hundreds of sheets and hundreds of MB, bid forms, specs, geotech, addenda, and CAD files (LandXML for earthwork; DXF/DWG stored for reference). Uploads resume if interrupted, and processing runs in the background.</p></div>
+        <div class="cap"><h3>Sheet index</h3><p>Sheets are split out, title blocks read into a searchable index with thumbnails, and each sheet classified (grading, utility plan &amp; profile, paving, structures, traffic control, and more). You can correct any of it.</p></div>
+        <div class="cap"><h3>Cost control on AI processing</h3><p>Heavy AI analysis runs only on takeoff-relevant sheets. Before it starts you see the estimated time and cost, your Admin sets limits, and AI cost is logged.</p></div>
+        <div class="cap"><h3>Manual takeoff tools, always available</h3><p>Plan viewer with per-sheet scale calibration (click two points of known distance) plus linear, polyline, area, and count tools. Click any quantity to jump to its exact spot on the sheet.</p></div>
+      </div>
+
+      <div class="ladder">
+        <h3 style="margin:.02in 0 .05in">Quantities come from three sources, ranked by reliability</h3>
+        <div class="rung r1"><span class="k">1 · Most reliable</span><span><b>The owner&rsquo;s bid schedule.</b> Extracted into an editable table (item number, description, spec section, unit, quantity). The estimate is organized by these bid items, so your final bid maps 1:1 to the owner&rsquo;s bid form.</span></div>
+        <div class="rung r2"><span class="k">2 · Reliable</span><span><b>Tabulated data on the plans.</b> Quantity summaries, pipe schedules, structure and manhole tables, curb and sidewalk tables, and earthwork summaries, each with its sheet reference.</span></div>
+        <div class="rung r3"><span class="k">3 · Least reliable</span><span><b>AI-assisted measurement, always flagged amber.</b> Suggested pipe run lengths, structure counts, and paved areas shown as overlays on the sheet, each with Accept / Edit / Reject.</span></div>
+      </div>
+
+      <div class="caps">
+        <div class="cap"><h3>Earthwork, handled honestly</h3><p>{{PRODUCT_NAME}} does <b>not</b> guess cut and fill from PDF contours. Earthwork comes from the bid schedule, from comparing imported LandXML surfaces, or from manual entry with a source note, then applies your swell and shrink factors.</p></div>
+        <div class="cap"><h3>Mandatory review</h3><p>One table lists every extracted or suggested quantity with its source, confidence, and sheet link. Each must be confirmed before it feeds the estimate. Gaps versus the owner&rsquo;s quantities beyond a % you set are flagged.</p></div>
+        <div class="cap"><h3>Addenda</h3><p>Upload anytime for a before/after diff of changed items, quantities, and sheets, with version history and acknowledgment tracking. RFQs already sent are flagged, with a revision offered.</p></div>
+        <div class="cap"><h3>Specifications</h3><p>Requirements referenced by bid items (gradation, binder grade, pipe class, concrete strength) are pulled with section references so RFQs state exactly what is needed. Missing standard specs are flagged.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Module 3 -->
+  <div class="module">
+    <div class="module-head"><span class="mn">3</span><div><h2>Estimate Builder</h2><p>Confirmed quantities become an estimate you can explain line by line.</p></div></div>
+    <div class="module-body">
+      <div class="caps">
+        <div class="cap"><h3>Pre-populated from your takeoff</h3><p>Organized by the owner&rsquo;s bid items, or by default sections (Earthwork, Wet Utilities, Paving &amp; Concrete, Structures, Indirect Costs) when there is no bid schedule.</p></div>
+        <div class="cap"><h3>Bid item mapping</h3><p>Each bid item maps to one or more of your assemblies. AI suggests, you confirm. Unmapped items block final output, so nothing slips through unpriced.</p></div>
+        <div class="cap"><h3>Job-level overrides</h3><p>Change any rate, production rate, price, or equipment cost for this job without touching company defaults. Overrides are marked and logged with an optional reason.</p></div>
+        <div class="cap"><h3>&ldquo;How was this calculated?&rdquo;</h3><p>On every line: the math in plain English, the values that fed it, and a link to the source sheet.</p></div>
+        <div class="cap"><h3>Confidence indicator</h3><p>Each line shows if it rests on calibrated data, verified values, supplier quotes, or unverified values. A summary reads, for example, &ldquo;82% of this estimate is based on calibrated, verified, or quoted data.&rdquo;</p></div>
+        <div class="cap"><h3>Built for real jobs</h3><p>Open shop or prevailing wage, haul distances, tax, and permits. Estimates are saved, duplicable, and versioned, and keep their original values unless you recalculate.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Module 4 -->
+  <div class="module newpage">
+    <div class="module-head"><span class="mn">4</span><div><h2>Material List &amp; Supplier RFQs: &ldquo;Get Prices&rdquo;</h2><p>From confirmed quantities to comparable supplier quotes, however you prefer to send.</p></div></div>
+    <div class="module-body">
+      <div class="caps">
+        <div class="cap"><h3>Material list</h3><p>Confirmed quantities &times; assembly components, using your own conversions (density, thickness, swell and shrink). Identical materials are consolidated across bid items with traceability kept. Fully editable, and subcontractor scope packages work the same way.</p></div>
+        <div class="cap"><h3>Professional RFQ spreadsheets</h3><p>One per supplier category plus a combined master, each with a unique number (for example <b>IR-2026-0142-AGG-R0</b>) in the file name, header, and email subject. Your logo leads, and only the supplier&rsquo;s cells are editable.</p></div>
+        <div class="cap"><h3>Two first-class ways to send <span class="tag-teal">Your choice</span></h3><p><b>Send from {{PRODUCT_NAME}}:</b> you approve every email; suppliers get the spreadsheet plus a secure no-login form; status and reminders are tracked. <b>Or export and send it yourself:</b> Excel, PDF, CSV, or .zip, with ready-to-paste email text.</p></div>
+        <div class="cap"><h3>Four ways for prices to come back</h3><p>Online form; filled Excel (auto-matched by RFQ number and line IDs); the supplier&rsquo;s own PDF quote; or pasted email text. The last two use AI extraction with mandatory review. Bulk upload supported.</p></div>
+        <div class="cap"><h3>Side-by-side quote comparison</h3><p>Lowest complete price highlighted; missing lines, exclusions, expired quotes, off-spec alternates, and outdated revisions flagged. Selected prices flow into the estimate with supplier, date, and expiry.</p></div>
+        <div class="cap"><h3>Never lose track</h3><p>Every download and send is logged. If quantities change after an RFQ goes out, a banner offers Revision 1, 2, and so on. Reminders on RFQs you sent yourself come to <b>you</b>.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Module 5 -->
+  <div class="module">
+    <div class="module-head"><span class="mn">5</span><div><h2>Learn From Past Jobs &amp; Close-Out</h2><p>Your history becomes the calibration that makes the next estimate sharper.</p></div></div>
+    <div class="module-body">
+      <div class="caps">
+        <div class="cap"><h3>Teach {{PRODUCT_NAME}} from completed jobs</h3><p>Upload past estimates and job cost reports (PDF, Excel/CSV, even photos of printed reports). AI extracts the lines; you review them beside the source and map them to your setup. Nothing is auto-imported. Manual entry is available too.</p></div>
+        <div class="cap"><h3>Variance calibration</h3><p>Estimated versus actual per activity, with suggested adjustments. Each needs your Approve, Edit, or Dismiss. Nothing adjusts on its own.</p></div>
+        <div class="cap"><h3>Close out this job</h3><p>Enter or upload final actual costs against the saved estimate and feed the same review and calibration, so learning becomes a habit, not a project.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Module 6 -->
+  <div class="module">
+    <div class="module-head"><span class="mn">6</span><div><h2>Bid Output</h2><p>Branded documents your team can hand off, and a bid form that matches the owner&rsquo;s.</p></div></div>
+    <div class="module-body">
+      <div class="caps">
+        <div class="cap"><h3>Bid summary PDF</h3><p>Line items, subtotals, markup, and total in your branding (&ldquo;Powered by {{PRODUCT_NAME}}&rdquo; small in the footer). Choose a <b>client version</b> that hides internal cost detail, or an <b>internal version</b>.</p></div>
+        <div class="cap"><h3>Bid form export</h3><p>Unit prices and extensions in the exact item order of the owner&rsquo;s bid schedule, as Excel and PDF, ready to transfer to the official form.</p></div>
+        <div class="cap"><h3>Full estimate export</h3><p>The complete estimate in Excel, plus RFQ and quote-comparison exports.</p></div>
+        <div class="cap"><h3>Yours to download</h3><p>Every file the app generates is downloadable. You are never forced to send, share, or finish anything inside {{PRODUCT_NAME}}.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 04 TRUST ============================ -->
+<section class="page">
+  <p class="eyebrow">04 · Built for trust</p>
+  <h1 class="title">Built so your estimators will rely on it.</h1>
+  <p class="lead">Estimating tools fail when people stop trusting the numbers. Every design decision below keeps your estimator in control and able to explain any figure to a bonding company, an owner, or a boss.</p>
+
+  <table class="qa">
+    <tr><td>Will it make up numbers?</td><td>No rates or prices come pre-loaded. Every value is entered, uploaded, or confirmed by your company, and estimates flag exactly which lines rely on unverified values, even if setup isn&rsquo;t finished.</td></tr>
+    <tr><td>What if the AI misreads a sheet?</td><td>AI output is always a draft. Each quantity shows its source, its confidence (amber means low), and a link to the exact spot on the sheet. Nothing feeds the estimate until a person confirms it.</td></tr>
+    <tr><td>Can we audit any number?</td><td>Every line has a &ldquo;How was this calculated?&rdquo; view in plain English, every price shows its source and date, and bids export in the owner&rsquo;s exact bid-form order.</td></tr>
+    <tr><td>Will it overwrite our rates?</td><td>No. Saved estimates keep their original values unless you explicitly recalculate. Calibration suggestions from past jobs need your Approve, Edit, or Dismiss.</td></tr>
+    <tr><td>Do we have to change how we email suppliers?</td><td>No. Send from the platform, or download the files and send from your own inbox to anyone, including people outside your directory. Quotes import the same either way.</td></tr>
+    <tr><td>Is our data kept separate?</td><td>Yes. Each company&rsquo;s records, uploaded files, and quote links are walled off from every other company. That separation is enforced in the database and in file storage, not just on screen, and automated tests attempt cross-company access to records, files, and quote links to confirm it fails.</td></tr>
+  </table>
+
+  <div class="callout amber">
+    <h3>What {{PRODUCT_NAME}} will deliberately not do</h3>
+    <ul class="dash">
+      <li>Ship with generic production rates, &ldquo;industry average&rdquo; costs, or a price database.</li>
+      <li>Automatically import, adjust, or apply anything without your review. Nothing flows into an estimate silently.</li>
+      <li>Send an RFQ you have not previewed and approved.</li>
+      <li>Calculate earthwork from PDF contours, or treat AI measurement as final. It is always flagged for review.</li>
+      <li>Force you to finish a step inside the platform. Every file is downloadable.</li>
+    </ul>
+  </div>
+
+  <p class="eyebrow" style="margin:.16in 0 .07in">What it looks like</p>
+  <div class="mocks">
+    <div>
+      <div class="mock">
+        <div class="bar"><i></i><i></i><i></i><span>Review quantities</span></div>
+        <div class="body">
+          <table>
+            <thead><tr><th>Item</th><th>Qty</th><th>Source</th><th>Confidence</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>8&Prime; sewer main</td><td>1,240 LF</td><td>Bid schedule, item 204</td><td><i class="dot g"></i>High</td><td><span class="pill ok">Confirmed</span></td></tr>
+              <tr><td>Storm inlets</td><td>18 EA</td><td>Structure table, C-7</td><td><i class="dot g"></i>High</td><td><span class="pill ok">Confirmed</span></td></tr>
+              <tr class="flag"><td>12&Prime; storm pipe</td><td>860 LF</td><td><span class="pill ai">AI suggestion</span> C-5</td><td><i class="dot a"></i>Low</td><td><span class="pill rev">Review</span></td></tr>
+              <tr class="flag"><td>Paved area, Type B</td><td>2,410 SY</td><td><span class="pill ai">AI suggestion</span> C-9</td><td><i class="dot a"></i>Low</td><td><span class="pill rev">Review</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="mock-cap"><b>Every quantity is a draft until you confirm it.</b> Concept illustration with sample values; final design will differ.</p>
+    </div>
+    <div>
+      <div class="mock">
+        <div class="bar"><i></i><i></i><i></i><span>How was this calculated?</span></div>
+        <div class="body calc">
+          <div class="row"><span class="lab">Quantity</span> from bid schedule, sheet C-4 <span class="src v">Confirmed</span></div>
+          <div class="row"><span class="lab">Crew days</span> = qty &divide; your production rate <span class="src v">Your value</span></div>
+          <div class="row"><span class="lab">Labor</span> = crew days &times; your crew cost <span class="src v">Your value</span></div>
+          <div class="row"><span class="lab">Pipe</span> = qty &times; waste % &times; price <span class="src q">Quote, dated</span></div>
+          <div class="row"><span class="lab">Bedding</span> = qty &times; your CY per LF <span class="src u">Unverified</span></div>
+        </div>
+      </div>
+      <p class="mock-cap"><b>Every line shows its math</b> and how much you can rely on each input. Concept illustration.</p>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============================ 05 INPUTS ============================ -->
+<section class="page">
+  <p class="eyebrow">05 · What we need from you</p>
+  <h1 class="title">The inputs that make it yours.</h1>
+  <p class="lead">{{PRODUCT_NAME}} starts empty, so it is exactly as good as the information behind it. The good news: you already have most of it. <b>Send it in whatever form it exists today</b> (spreadsheets, PDFs, scans, even photos of printed reports). Import tools read it and your team reviews the result. You don&rsquo;t need everything up front: each item is tied to the phase where we first need it, and your files stay in your private workspace.</p>
+
+  <h2 style="margin-top:.04in">The people we need</h2>
+  <div class="people">
+    <div><b>Executive sponsor</b>Sets company defaults (markup, overhead, tax, bonding), clears roadblocks, and signs off at each milestone.</div>
+    <div><b>Lead estimator (our champion)</b>Our day-to-day partner. Knows how bids really get built, tests every phase with real work.</div>
+    <div><b>Admin</b>Owns rates, approvals, the supplier directory, and email settings after launch.</div>
+    <div><b>Purchasing contact</b>Confirms supplier categories and contacts, and helps us test real supplier quotes.</div>
+    <div><b>IT / web contact</b><i>Only if</i> you want to send from your company domain: adds a few DNS records we supply.</div>
+  </div>
+
+  <div class="tier"><span class="badge">Tier 1</span><h2>To get started</h2><span class="when">Needed at kickoff · Phase 1</span></div>
+  <table class="inputs">
+    <thead><tr><th>What we need</th><th>Why</th><th>Format that works</th><th>Best owner</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr><td>Logo, defaults, and standard RFQ email</td><td>Your branding leads on PDFs and RFQs. Defaults: markup %, overhead %, sales tax, project types bid (Gov / State / Commercial), bonding and insurance approach. Plus your usual RFQ subject, message, and signature.</td><td>Logo file, hex color if known, and a short conversation</td><td>Executive sponsor / Admin</td><td>1</td></tr>
+      <tr><td>Supplier and subcontractor directories</td><td>Power RFQ suggestions by category and service area: company, contacts, emails, phones, categories supplied, preferred flag. Subs cover striping, fencing, electrical, traffic control, and so on.</td><td>Any list: Excel, CSV, exported contacts</td><td>Purchasing</td><td>1</td></tr>
+      <tr><td>Materials and current prices</td><td>The start of your material library: name, unit, unit cost, supplier, date last quoted, density (tons/CY), waste %, spec notes.</td><td>Your current price sheet or spreadsheet</td><td>Estimator / Purchasing</td><td>1</td></tr>
+      <tr><td>Labor roles and rates</td><td>Operator, laborer, foreman, flagger, pipe layer, and others: base wage, burden %, and prevailing / Davis-Bacon rate. Current wage determinations are welcome.</td><td>Spreadsheet, payroll report, or wage determination PDF</td><td>Payroll / Admin</td><td>1</td></tr>
+      <tr><td>Equipment costs</td><td>Each machine&rsquo;s hourly ownership and operating cost, standby rate, and mobilization cost per move.</td><td>Your equipment cost report as it is</td><td>Equipment manager</td><td>1</td></tr>
+      <tr><td>Baseline numbers</td><td>Bids per year, typical estimator hours per bid, typical bid package size, and current win rate, so we can prove the improvement.</td><td>Your best estimate</td><td>Executive sponsor</td><td>1</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tier t2 newpage"><span class="badge">Tier 2</span><h2>To make estimates accurate</h2><span class="when">Phases 2–4</span></div>
+  <table class="inputs">
+    <thead><tr><th>What we need</th><th>Why</th><th>Format that works</th><th>Best owner</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr><td>Crew production rates</td><td>Real-world output for your main activities and which equipment and labor make up each crew. We ask in plain language, so you never need the formula.</td><td>A working session, plus notes from recent jobs</td><td>Lead estimator / Superintendent</td><td>2</td></tr>
+      <tr><td>Soil types and behavior</td><td>The soils you regularly encounter, with your own swell and shrink percentages.</td><td>A short list; we can walk through it together</td><td>Lead estimator</td><td>2</td></tr>
+      <tr><td>Your most-used assemblies</td><td>A starting set (we suggest 10–20) of the work packages you price most often, such as pipe by size and depth, structures, aggregate base, paving, and curb and gutter.</td><td>A working session, plus any existing unit-price sheets</td><td>Lead estimator</td><td>2</td></tr>
+      <tr><td>Recent bid packages</td><td>To test and tune extraction on the documents you really receive. Please include the mix of owners you bid (federal, state DOT, county/city, private): plan set, bid schedule, specifications, geotech, addenda.</td><td>PDF and Excel, as issued</td><td>Lead estimator</td><td>3</td></tr>
+      <tr><td>Your finished takeoff and estimate for those jobs</td><td>So we can compare {{PRODUCT_NAME}}&rsquo;s draft against your known-good answer. This is the most valuable test we can run.</td><td>Whatever you produced (Excel, PDF, notes)</td><td>Lead estimator</td><td>3–4</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tier t3"><span class="badge">Tier 3</span><h2>To make it smarter over time</h2><span class="when">Phases 5–9</span></div>
+  <table class="inputs">
+    <thead><tr><th>What we need</th><th>Why</th><th>Format that works</th><th>Best owner</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr><td>Recent real supplier quotes</td><td>To test quote import on the formats your suppliers actually send.</td><td>As received: PDF, spreadsheet, or email</td><td>Estimator / Purchasing</td><td>5</td></tr>
+      <tr><td>Email sending choice</td><td>Send from {{PRODUCT_NAME}} (works immediately), from your own company domain (needs IT), or from each estimator&rsquo;s own mailbox.</td><td>A decision. We explain the pros and cons.</td><td>Admin / IT</td><td>6</td></tr>
+      <tr><td>Earthwork and CAD samples</td><td>To validate cut/fill from LandXML existing and proposed surfaces, if you use them.</td><td>LandXML, DXF/DWG, or CSV point files</td><td>Lead estimator</td><td>7</td></tr>
+      <tr><td>State DOT and other standard specs</td><td>Bid items often reference standard specifications that are not in the bid package. Having them lets RFQs state exact requirements.</td><td>PDF</td><td>Lead estimator</td><td>7</td></tr>
+      <tr><td>Past job cost reports</td><td>The fuel for calibration: bid estimate plus final job cost for completed jobs. Start with a handful of recent, well-documented jobs.</td><td>PDF, Excel/CSV, or images of printed reports</td><td>Operations / Accounting</td><td>8</td></tr>
+      <tr><td>Your bid form and bid summary format</td><td>So the client-version summary and bid form export look the way you expect.</td><td>A sample of what you send today</td><td>Lead estimator</td><td>9</td></tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:.14in">Quick decisions we will walk through with you</h2>
+  <div class="decisions">
+    <ul class="tick">
+      <li>Days before a material price counts as stale</li>
+      <li>% gap between your takeoff and the owner&rsquo;s schedule that triggers a review</li>
+      <li>How far ahead of quote deadlines reminders go out</li>
+    </ul>
+    <ul class="tick">
+      <li>Which project and owner types you bid</li>
+      <li>Your AI processing limits</li>
+      <li>Who is an Admin and who is an Estimator</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 06 ROADMAP ============================ -->
+<section class="page">
+  <p class="eyebrow">06 · Roadmap</p>
+  <h1 class="title">Built and proven in stages.</h1>
+  <p class="lead">We build in nine phases, grouped into six milestones. <b>Each phase is confirmed working with your team before the next begins</b>, so you see real progress and can redirect early. Timing for each milestone is agreed at kickoff.</p>
+
+  <div class="chev">
+    <div>1 · Foundation<small>Phases 1–2</small></div>
+    <div>2 · Takeoff<small>Phase 3</small></div>
+    <div>3 · Estimate<small>Phase 4</small></div>
+    <div>4 · Get Prices<small>Phases 5–6</small></div>
+    <div>5 · Automate<small>Phase 7</small></div>
+    <div>6 · Learn &amp; Deliver<small>Phases 8–9</small></div>
+  </div>
+
+  <table class="road">
+    <thead><tr><th>Milestone</th><th>What ships</th><th>What your team can do</th><th>What we need from you</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Foundation &amp; Company Setup<small>Phases 1–2</small></td>
+        <td>Your private workspace, secure sign-in, Admin and Estimator roles, and the full setup wizard (labor, equipment, materials, suppliers, production rates, soils, assemblies).</td>
+        <td>Load your company&rsquo;s costs, supplier directory, and assemblies into one place and see a live cost per unit.</td>
+        <td>All Tier 1 items, plus production rates, soil factors, and a starter set of assemblies.</td></tr>
+      <tr><td>2 · Plan Room &amp; Takeoff<small>Phase 3</small></td>
+        <td>Bid package upload, sheet index, plan viewer, bid schedule and plan-table extraction with mandatory review, and manual takeoff tools.</td>
+        <td>Upload a real bid package and get a reviewed, source-linked quantity takeoff.</td>
+        <td>Recent bid packages, plus your finished takeoff for comparison.</td></tr>
+      <tr><td>3 · Estimate Builder<small>Phase 4</small></td>
+        <td>Estimate populated from confirmed quantities, bid item mapping, job overrides, formula transparency, and confidence indicators.</td>
+        <td>Build a complete, explainable estimate from your own data and compare it to your known-good number.</td>
+        <td>Your finished estimates for the sample jobs; feedback on assembly mapping.</td></tr>
+      <tr><td>4 · Get Prices<small>Phases 5–6</small></td>
+        <td>Material list, numbered RFQs, export-and-send-yourself, quote import, and comparison. Then send-from-{{PRODUCT_NAME}}: three email methods, supplier quote form, status tracking, reminders.</td>
+        <td>Get prices out and back in, whichever way you prefer to send, and drop selected quotes into the estimate.</td>
+        <td>Real supplier quotes; your email-sending decision; an IT contact if using your domain.</td></tr>
+      <tr><td>5 · Advanced Automation<small>Phase 7</small></td>
+        <td>AI-assisted measurement from drawings (always flagged), LandXML earthwork import, addenda diffing with RFQ revisions, and specification extraction.</td>
+        <td>Speed up takeoff, handle addenda cleanly, and compute cut/fill from real surfaces.</td>
+        <td>LandXML / CAD samples, standard specs, and an addendum example.</td></tr>
+      <tr><td>6 · Learn &amp; Deliver<small>Phases 8–9</small></td>
+        <td>Historical job import and variance calibration, job close-out, bid summary PDFs (client and internal), bid form export, and full Excel export.</td>
+        <td>Calibrate estimates against your real results and produce the final bid documents.</td>
+        <td>Past job cost reports; your bid form and summary format.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <h3>Milestone reviews</h3>
+    <p style="margin:0">At the end of each milestone we run real work through what was built with your lead estimator. We move on only when it meets your standard.</p>
+  </div>
+</section>
+
+<!-- ============================ 07 ROLLOUT ============================ -->
+<section class="page">
+  <p class="eyebrow">07 · Making it a no-brainer</p>
+  <h1 class="title">A rollout with zero risk to your next bid.</h1>
+  <p class="lead">Estimators adopt tools that prove themselves on real work without putting a live bid at risk. So we propose a rollout where you never bet a bid on {{PRODUCT_NAME}} until it has earned it.</p>
+
+  <div class="steps5">
+    <div><em>Step 1</em><b>Kick off</b>Name the sponsor and lead estimator, agree on success measures, capture baselines, collect Tier 1 inputs.</div>
+    <div><em>Step 2</em><b>Guided setup</b>Walk through setup with your lead estimator, import what you already have, and watch the completeness score climb.</div>
+    <div><em>Step 3</em><b>Shadow bid</b>Run a recent or live bid through {{PRODUCT_NAME}} beside your usual process. Compare quantities, costs, and time. Close gaps together.</div>
+    <div><em>Step 4</em><b>Calibrate</b>Import past jobs, review the variance findings, and approve the adjustments that match your experience.</div>
+    <div><em>Step 5</em><b>Go live</b>Bid a live job on {{PRODUCT_NAME}}, keeping your current process as backup until your team is confident.</div>
+  </div>
+
+  <h2>How we will know it is working</h2>
+  <p style="margin-bottom:.05in">At kickoff we agree on a few plain measures against your baselines. Examples:</p>
+  <ul class="tick">
+    <li>Draft quantities agree with your own finished takeoff within a tolerance you set.</li>
+    <li>Estimator time per bid, compared with your baseline.</li>
+    <li>The share of each estimate backed by verified, calibrated, or quoted data (which {{PRODUCT_NAME}} reports on every estimate).</li>
+  </ul>
+
+  <h2>Your getting-started checklist</h2>
+  <p class="small" style="margin-top:-.03in">Send these when you can. Anything in any format is fine, and partial is fine too.</p>
+  <ul class="checklist">
+    <li><div><b>Name your executive sponsor and lead estimator</b> <span>&nbsp;·&nbsp; Our two main points of contact on your side.</span></div></li>
+    <li><div><b>Logo and brand color</b> <span>&nbsp;·&nbsp; For white-labelled PDFs and RFQ spreadsheets.</span></div></li>
+    <li><div><b>Supplier and subcontractor lists</b> <span>&nbsp;·&nbsp; Any format: Excel, CSV, exported contacts.</span></div></li>
+    <li><div><b>Your current materials price sheet</b> <span>&nbsp;·&nbsp; With supplier and date last quoted where you have them.</span></div></li>
+    <li><div><b>3–5 recent bid packages, and your finished takeoff or estimate for at least one</b> <span>&nbsp;·&nbsp; Across the owner types you bid: federal, state DOT, county/city, private.</span></div></li>
+    <li><div><b>Company defaults</b> <span>&nbsp;·&nbsp; Markup, overhead, sales tax, and how you handle bonding and insurance costs.</span></div></li>
+    <li><div><b>Baseline numbers</b> <span>&nbsp;·&nbsp; Bids per year, hours per bid, and win rate, so we can measure the difference.</span></div></li>
+  </ul>
+
+  <div class="closing">
+    <div>
+      <h3>Ready when you are.</h3>
+      <p>Tell us what we missed, name your two people, and send what you have. We will handle the rest, step by step.</p>
+    </div>
+    <div class="who"><b>{{PREPARED_BY}}</b>{{CONTACT_LINE}}</div>
+  </div>
+</section>
+
+</body>
+</html>
