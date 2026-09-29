@@ -1,0 +1,9 @@
+node_modules
+.next
+storage
+storage-test
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+public/pdf.worker.min.mjs

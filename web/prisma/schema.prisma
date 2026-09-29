@@ -1,0 +1,575 @@
+// TrueGrade data model.
+// Every tenant-owned table carries companyId. The tenant-scoped Prisma client
+// (src/lib/db.ts) injects companyId into every query, so isolation is enforced
+// at the query layer rather than trusted to UI code.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  ESTIMATOR
+}
+
+model Company {
+  id                 String   @id @default(cuid())
+  name               String
+  subdomain          String   @unique
+  rfqPrefix          String   @default("CO")
+  logoPath           String?
+  accentColor        String   @default("#FF6B00")
+  defaultMarkupPct   Float?
+  overheadPct        Float?
+  salesTaxPct        Float?
+  projectTypes       String[] @default([])
+  bondingApproach    String?
+  bondingPct         Float?
+  rfqSubject         String?
+  rfqBody            String?
+  rfqSignature       String?
+  quoteExpiryDays    Int      @default(30)
+  takeoffVariancePct Float    @default(5)
+  emailMethod        String   @default("TRUEGRADE")
+  customEmailDomain  String?
+  aiMonthlyLimitUsd  Float    @default(50)
+  setupProgress      Json     @default("{}")
+  jobCounter         Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  users User[]
+}
+
+model User {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  email           String
+  name            String
+  phone           String?
+  passwordHash    String
+  role            Role     @default(ESTIMATOR)
+  isPlatformAdmin Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  sessions Session[]
+
+  @@unique([companyId, email])
+}
+
+model Session {
+  id        String   @id // sha256 of the cookie token
+  companyId String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+}
+
+// ---------- Company setup ----------
+
+model LaborRole {
+  id             String   @id @default(cuid())
+  companyId      String
+  name           String
+  baseWage       Float?
+  burdenPct      Float?
+  prevailingWage Float?
+  prevailingFringe Float?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model PrevailingWageRate {
+  id          String   @id @default(cuid())
+  companyId   String
+  county      String
+  projectRef  String?
+  laborRoleId String?
+  classification String
+  baseRate    Float?
+  fringe      Float?
+  source      String?
+  effectiveAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model Equipment {
+  id               String   @id @default(cuid())
+  companyId        String
+  name             String
+  type             String?
+  ownershipHourly  Float?
+  operatingHourly  Float?
+  standbyHourly    Float?
+  mobilizationCost Float?
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model SupplierCategory {
+  id        String @id @default(cuid())
+  companyId String
+  code      String // short code used in RFQ numbers, e.g. AGG
+  name      String
+  kind      String @default("SUPPLIER") // SUPPLIER | SUBCONTRACTOR
+  sortOrder Int    @default(0)
+
+  @@unique([companyId, code])
+}
+
+model Supplier {
+  id          String    @id @default(cuid())
+  companyId   String
+  kind        String    @default("SUPPLIER") // SUPPLIER | SUBCONTRACTOR
+  name        String
+  categories  String[]  @default([])
+  serviceArea String?
+  preferred   Boolean   @default(false)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  contacts    Contact[]
+
+  @@index([companyId])
+}
+
+model Contact {
+  id         String   @id @default(cuid())
+  companyId  String
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  name       String
+  title      String?
+  email      String?
+  phone      String?
+  isPrimary  Boolean  @default(false)
+
+  @@index([companyId])
+}
+
+model Material {
+  id              String    @id @default(cuid())
+  companyId       String
+  name            String
+  unit            String
+  unitCost        Float?
+  categoryCode    String?
+  supplierId      String?
+  lastQuotedAt    DateTime?
+  densityTonsPerCy Float?
+  wastePct        Float?
+  specNotes       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+}
+
+model MaterialPriceHistory {
+  id         String   @id @default(cuid())
+  companyId  String
+  materialId String
+  unitCost   Float
+  source     String
+  supplierId String?
+  quoteId    String?
+  quotedAt   DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, materialId])
+}
+
+model ProductionRate {
+  id           String   @id @default(cuid())
+  companyId    String
+  activity     String
+  unit         String
+  outputPerDay Float?
+  hoursPerDay  Float    @default(8)
+  crew         Json     @default("{\"labor\":[],\"equipment\":[]}") // {labor:[{laborRoleId,count}], equipment:[{equipmentId,count}]}
+  notes        String?
+  verified     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model SoilType {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  swellPct  Float?
+  shrinkPct Float?
+  notes     String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model Assembly {
+  id               String   @id @default(cuid())
+  companyId        String
+  name             String
+  unit             String
+  description      String?
+  productionRateId String?
+  materials        Json     @default("[]") // [{materialId, qtyPerUnit, note}]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// ---------- Projects / bids ----------
+
+model Project {
+  id               String    @id @default(cuid())
+  companyId        String
+  jobNumber        String
+  name             String
+  owner            String?
+  ownerType        String?   // FEDERAL | STATE_DOT | COUNTY_CITY | PRIVATE
+  projectNumber    String?
+  location         String?
+  bidDueAt         DateTime?
+  preBidMeeting    String?
+  quoteDueAt       DateTime?
+  deliveryLocation String?
+  laborMode        String    @default("OPEN") // OPEN | PREVAILING
+  estimatorId      String?
+  markupPct        Float?
+  overheadPct      Float?
+  taxPct           Float?
+  bondPct          Float?
+  haulMiles        Float?
+  permitsCost      Float?
+  notes            String?
+  status           String    @default("BIDDING")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([companyId, jobNumber])
+}
+
+model Document {
+  id             String   @id @default(cuid())
+  companyId      String
+  projectId      String
+  filename       String
+  storageKey     String
+  size           Int
+  mime           String
+  kind           String   @default("OTHER") // PLANS | BID_SCHEDULE | SPECS | GEOTECH | ADDENDUM | CAD | QUOTE | OTHER
+  kindConfirmed  Boolean  @default(false)
+  suggestedKind  String?
+  pageCount      Int?
+  hasText        Boolean?
+  status         String   @default("UPLOADED") // UPLOADED | PROCESSING | READY | FAILED
+  statusDetail   String?
+  scanStatus     String   @default("NOT_SCANNED")
+  addendumNumber Int?
+  acknowledged   Boolean  @default(false)
+  uploadedById   String?
+  createdAt      DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model Sheet {
+  id             String  @id @default(cuid())
+  companyId      String
+  documentId     String
+  projectId      String
+  pageIndex      Int
+  sheetNumber    String?
+  title          String?
+  discipline     String?
+  classification String?
+  classConfirmed Boolean @default(false)
+  hasText        Boolean @default(false)
+  scaleText      String?
+  feetPerUnit    Float?  // calibration: real feet per PDF user-space unit
+  calibratedById String?
+
+  @@unique([documentId, pageIndex])
+  @@index([companyId, projectId])
+}
+
+model UploadSession {
+  id            String   @id @default(cuid())
+  companyId     String
+  projectId     String
+  filename      String
+  mime          String
+  size          Int
+  receivedBytes Int      @default(0)
+  kind          String   @default("OTHER")
+  userId        String
+  createdAt     DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model BidItem {
+  id            String   @id @default(cuid())
+  companyId     String
+  projectId     String
+  itemNumber    String
+  description   String
+  specSection   String?
+  unit          String
+  quantity      Float?
+  section       String?  // default section when there is no owner schedule
+  source        String   @default("MANUAL") // BID_SCHEDULE | TABULATED | AI_MEASURE | MANUAL | LANDXML
+  sourceNote    String?
+  documentId    String?
+  pageIndex     Int?
+  confidence    String   @default("HIGH") // HIGH | LOW
+  aiExtracted   Boolean  @default(false)
+  status        String   @default("DRAFT") // DRAFT | CONFIRMED
+  confirmedById String?
+  confirmedAt   DateTime?
+  sortOrder     Int      @default(0)
+  specRequirement String?
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model TakeoffMarkup {
+  id         String   @id @default(cuid())
+  companyId  String
+  projectId  String
+  documentId String
+  pageIndex  Int
+  bidItemId  String?
+  tool       String   // LINEAR | POLYLINE | AREA | COUNT
+  points     Json     // [[x,y], ...] in PDF user-space units
+  quantity   Float
+  unit       String
+  color      String   @default("#FF6B00")
+  label      String?
+  createdById String?
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model BidItemAssembly {
+  id         String   @id @default(cuid())
+  companyId  String
+  projectId  String
+  bidItemId  String
+  assemblyId String
+  qtyFactor  Float    @default(1)
+  confirmed  Boolean  @default(false)
+  aiSuggested Boolean @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model JobOverride {
+  id         String   @id @default(cuid())
+  companyId  String
+  projectId  String
+  targetType String   // LABOR_ROLE | EQUIPMENT | MATERIAL | PRODUCTION_RATE
+  targetId   String
+  field      String
+  value      Float
+  reason     String?
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@unique([projectId, targetType, targetId, field])
+  @@index([companyId])
+}
+
+model EstimateVersion {
+  id        String   @id @default(cuid())
+  companyId String
+  projectId String
+  version   Int
+  label     String?
+  snapshot  Json
+  total     Float
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model MaterialLine {
+  id              String   @id @default(cuid())
+  companyId       String
+  projectId       String
+  materialId      String?
+  description     String
+  unit            String
+  quantity        Float
+  wastePct        Float    @default(0)
+  specRequirement String?
+  specSection     String?
+  categoryCode    String?
+  bidItemRefs     Json     @default("[]") // [{bidItemId,itemNumber,qty}]
+  manual          Boolean  @default(false)
+  excluded        Boolean  @default(false)
+  selectedQuoteLineId String?
+  sortOrder       Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId, projectId])
+}
+
+model Rfq {
+  id           String   @id @default(cuid())
+  companyId    String
+  projectId    String
+  categoryCode String   // category code or ALL for the master RFQ
+  revision     Int      @default(0)
+  number       String
+  lines        Json     // frozen snapshot of lines at generation time
+  contentHash  String
+  superseded   Boolean  @default(false)
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  @@unique([companyId, number])
+  @@index([companyId, projectId])
+}
+
+model RfqRecipient {
+  id             String    @id @default(cuid())
+  companyId      String
+  rfqId          String
+  supplierId     String?
+  name           String
+  email          String?
+  method         String    @default("OUTSIDE") // OUTSIDE | TRUEGRADE
+  status         String    @default("SENT")    // SENT | OPENED | RESPONDED | DECLINED
+  sentAt         DateTime  @default(now())
+  token          String    @unique
+  tokenExpiresAt DateTime
+  createdById    String?
+
+  @@index([companyId, rfqId])
+}
+
+model RfqDownload {
+  id         String   @id @default(cuid())
+  companyId  String
+  rfqId      String
+  userId     String?
+  format     String
+  revision   Int
+  supplierId String?
+  contentHash String
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, rfqId])
+}
+
+model Quote {
+  id              String    @id @default(cuid())
+  companyId       String
+  projectId       String
+  rfqId           String?
+  rfqRevision     Int?
+  supplierId      String?
+  supplierName    String?
+  source          String    // FORM | XLSX | PDF | EMAIL
+  documentId      String?
+  status          String    @default("REVIEW") // REVIEW | CONFIRMED
+  quoteNumber     String?
+  quotedAt        DateTime?
+  validUntil      DateTime?
+  taxIncluded     Boolean?
+  freightIncluded Boolean?
+  minimumOrder    String?
+  exclusions      String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  @@index([companyId, projectId])
+}
+
+model QuoteLine {
+  id             String  @id @default(cuid())
+  companyId      String
+  quoteId        String
+  materialLineId String?
+  lineRef        String?
+  section        String?
+  description    String
+  quantity       Float?
+  unit           String?
+  unitPrice      Float?
+  extended       Float?
+  leadTime       String?
+  notes          String?
+  isAlternate    Boolean @default(false)
+  confidence     String  @default("HIGH")
+  matchMethod    String? // LINE_ID | AI | MANUAL
+  sortOrder      Int     @default(0)
+
+  @@index([companyId, quoteId])
+}
+
+model Job {
+  id        String   @id @default(cuid())
+  companyId String
+  type      String
+  payload   Json
+  status    String   @default("QUEUED") // QUEUED | RUNNING | DONE | FAILED
+  attempts  Int      @default(0)
+  maxAttempts Int    @default(3)
+  runAt     DateTime @default(now())
+  progress  Int      @default(0)
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, runAt])
+  @@index([companyId])
+}
+
+model AiUsage {
+  id           String   @id @default(cuid())
+  companyId    String
+  feature      String
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  costUsd      Float
+  refId        String?
+  createdAt    DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  companyId String
+  userId    String?
+  action    String
+  target    String?
+  detail    Json?
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+}
