@@ -35,15 +35,15 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <p className="text-sm text-mist/70">{PRODUCT_NAME} by {PLATFORM_OWNER}</p>
       </section>
       <section className="relative flex items-center justify-center p-8">
-        <form action={login} className="w-full max-w-md">
-          <div className="mb-8 lg:hidden"><Logo light /></div>
+        <form action={login} className="w-full max-w-md rounded-2xl bg-white p-10 text-ink shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
+          <div className="mb-8 lg:hidden"><Logo /></div>
           <div className="text-xs font-semibold uppercase tracking-wider text-brand">{tenant.name}</div>
-          <h2 className="mb-8 text-4xl font-bold text-white">Sign in to {PRODUCT_NAME}</h2>
-          {error && <p className="mb-4 rounded-lg border border-warn-line/40 bg-warn/15 p-3 text-sm text-amber-200">That email and password didn&apos;t match. Try again.</p>}
-          <label className="label !text-mist" htmlFor="email">Email</label>
-          <input id="email" name="email" type="email" autoComplete="email" required className="input mb-5 !border-navy-700 !bg-navy-950 !text-white" />
-          <label className="label !text-mist" htmlFor="password">Password</label>
-          <input id="password" name="password" type="password" autoComplete="current-password" required className="input mb-8 !border-navy-700 !bg-navy-950 !text-white" />
+          <h2 className="mb-8 text-4xl font-bold text-night">Sign in to {PRODUCT_NAME}</h2>
+          {error && <p className="mb-4 rounded-lg border border-warn-line bg-warn-bg p-3 text-sm text-warn">That email and password didn&apos;t match. Try again.</p>}
+          <label className="label" htmlFor="email">Email</label>
+          <input id="email" name="email" type="email" autoComplete="email" required className="input mb-5" />
+          <label className="label" htmlFor="password">Password</label>
+          <input id="password" name="password" type="password" autoComplete="current-password" required className="input mb-8" />
           <button className="btn btn-primary w-full justify-center py-3">Sign in</button>
         </form>
       </section>
