@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { resolveQuoteLink } from "@/lib/publicquote";
 import { POWERED_BY } from "@/config/brand";
+import { logoUrl } from "@/lib/logo";
 
 export const dynamic = "force-dynamic";
 
@@ -46,9 +47,12 @@ export default async function SupplierQuoteForm({ params, searchParams }: { para
   const { token } = await params;
   const { sent } = await searchParams;
   const r = await resolveQuoteLink(await hostOf(), token);
-  const shell = (body: React.ReactNode, company?: { name: string; accentColor: string }) => (
+  const shell = (body: React.ReactNode, company?: { name: string; accentColor: string; logoPath?: string | null; updatedAt?: Date }) => (
     <main className="min-h-screen bg-paper">
-      <header className="bg-night px-6 py-4 text-white"><span className="font-display text-2xl font-bold" style={{ color: company?.accentColor }}>{company?.name ?? "Quote request"}</span></header>
+      <header className="flex items-center gap-3 bg-night px-6 py-4 text-white">
+        {company?.logoPath && company.updatedAt && <img src={logoUrl({ logoPath: company.logoPath, updatedAt: company.updatedAt })!} alt="" className="h-10 w-10 rounded-md bg-white object-contain p-0.5" />}
+        <span className="font-display text-2xl font-bold" style={{ color: company?.accentColor }}>{company?.name ?? "Quote request"}</span>
+      </header>
       <div className="mx-auto max-w-5xl p-6">{body}</div>
       <footer className="pb-6 text-center text-xs text-faint">{POWERED_BY}</footer>
     </main>

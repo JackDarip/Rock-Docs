@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import { NavLinks } from "@/components/NavLinks";
 import { Icon } from "@/components/Icon";
 import { PRODUCT_NAME, POWERED_BY } from "@/config/brand";
+import { logoUrl } from "@/lib/logo";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex items-center gap-2.5 px-5 py-3">
           {company.logoPath ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/api/logo" alt="" className="h-9 w-9 rounded-md bg-white object-contain p-0.5" />
+            <img src={logoUrl(company)!} alt="" className="h-9 w-9 rounded-md bg-white object-contain p-0.5" />
           ) : (
             <span className="flex h-9 w-9 items-center justify-center rounded-md font-bold" style={{ background: company.accentColor }}>{company.name[0]}</span>
           )}

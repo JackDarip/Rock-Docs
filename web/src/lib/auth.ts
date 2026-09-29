@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { prisma, tenantDb } from "./db";
 import { getTenant } from "./tenant";
 
-export const SESSION_COOKIE = "tg_session";
+export const SESSION_COOKIE = "rd_session";
 const SESSION_DAYS = 14;
 
 const hashToken = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
