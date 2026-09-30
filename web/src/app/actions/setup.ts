@@ -6,7 +6,7 @@ import ExcelJS from "exceljs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdminCtx, requireCtx, hashPassword } from "@/lib/auth";
-import { newKey, storage } from "@/lib/storage";
+import { newKey, putScanned, storage } from "@/lib/storage";
 
 export async function skipStep(step: string) {
   const { company } = await requireCtx();
@@ -31,7 +31,7 @@ const companyFields = z.object({
   quoteExpiryDays: z.number().int().min(1).max(365),
   takeoffVariancePct: z.number().min(0).max(100),
   aiMonthlyLimitUsd: z.number().min(0),
-  emailMethod: z.enum(["TRUEGRADE", "DOMAIN", "CONNECTED"]),
+  emailMethod: z.enum(["PLATFORM", "DOMAIN", "CONNECTED"]),
   customEmailDomain: z.string().nullable(),
 }).partial();
 
@@ -47,14 +47,31 @@ export async function updateCompany(field: string, value: unknown) {
 export async function uploadLogo(formData: FormData) {
   const { company } = await requireAdminCtx();
   const file = formData.get("logo") as File | null;
-  if (!file || !file.size) return { ok: false, error: "Choose an image file" };
-  if (!/^image\/(png|jpeg|svg\+xml|webp)$/.test(file.type)) return { ok: false, error: "Use a PNG or JPG (PNG/JPG also appear on PDFs and spreadsheets)" };
-  if (file.size > 3e6) return { ok: false, error: "Logo must be under 3 MB" };
-  const key = newKey(company.id, "branding", file.name);
-  await storage.put(company.id, key, Buffer.from(await file.arrayBuffer()));
-  await prisma.company.update({ where: { id: company.id }, data: { logoPath: key } });
+  if (!file || !file.size) return { ok: false as const, error: "Choose an image file" };
+  if (file.size > 3e6) return { ok: false as const, error: "Logo must be under 3 MB" };
+  const buf = Buffer.from(await file.arrayBuffer());
+  // Check the bytes, not the browser's claimed type: PNG and JPG are the formats
+  // that also embed in PDFs and spreadsheets.
+  const isPng = buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const isJpg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+  if (!isPng && !isJpg) return { ok: false as const, error: "Use a PNG or JPG image (they also appear on your PDFs and RFQ spreadsheets)" };
+  const key = newKey(company.id, "branding", isPng ? "logo.png" : "logo.jpg");
+  try { await putScanned(company.id, key, buf); } catch (e) { return { ok: false as const, error: e instanceof Error ? e.message : "Upload refused" }; }
+  const old = company.logoPath;
+  const updated = await prisma.company.update({ where: { id: company.id }, data: { logoPath: key } });
+  if (old) await storage.remove(company.id, old).catch(() => {});
   revalidatePath("/", "layout");
-  return { ok: true };
+  return { ok: true as const, url: `/api/logo?v=${updated.updatedAt.getTime()}` };
+}
+
+export async function removeLogo() {
+  const { company } = await requireAdminCtx();
+  if (company.logoPath) {
+    await prisma.company.update({ where: { id: company.id }, data: { logoPath: null } });
+    await storage.remove(company.id, company.logoPath).catch(() => {});
+  }
+  revalidatePath("/", "layout");
+  return { ok: true as const };
 }
 
 // ---------- Production rates & assemblies ----------
@@ -80,7 +97,10 @@ export async function saveProductionRate(id: string | null, data: unknown) {
   const parsed = prodSchema.safeParse(data);
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues.map((i) => i.message).join("; ") };
   await assertOwned(db, parsed.data.crew);
-  const row = id ? await db.productionRate.update({ where: { id }, data: parsed.data }) : await db.productionRate.create({ data: parsed.data as any });
+  const prev = id ? await db.productionRate.findUnique({ where: { id } }) : null;
+  // A hand edit to the daily output means it's no longer the calibrated value.
+  const recal = prev?.calibratedAt && prev.outputPerDay !== parsed.data.outputPerDay ? { calibratedAt: null, calibrationNote: null } : {};
+  const row = id ? await db.productionRate.update({ where: { id }, data: { ...parsed.data, ...recal } }) : await db.productionRate.create({ data: parsed.data as any });
   revalidatePath("/setup/production");
   return { ok: true as const, id: row.id };
 }

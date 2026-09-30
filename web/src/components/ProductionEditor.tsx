@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveProductionRate, deleteSetupRecord } from "@/app/actions/setup";
 import { buildContext, crewCost, unitsPerHour, type CrewT, type EquipmentT, type LaborRoleT, type ProductionRateT } from "@/lib/calc";
 
-type Rate = ProductionRateT & { notes: string | null };
+type Rate = ProductionRateT & { notes: string | null; calibrationNote?: string | null };
 
 const UNITS = ["CY", "LF", "SY", "SF", "TON", "EA", "LS", "AC"];
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -28,7 +28,10 @@ export function ProductionEditor({ rates, laborRoles, equipment, readOnly }: { r
             <button key={r.id} onClick={() => setEditing(r)} className={`card block w-full p-4 text-left transition hover:border-brand ${editing?.id === r.id ? "border-brand" : ""}`}>
               <div className="flex items-center justify-between">
                 <div className="font-semibold">{r.activity}</div>
-                {(c.issues.length > 0 || !r.verified) && <span className="flag flag-warn">⚠ Check</span>}
+                <span className="flex gap-1">
+                  {r.calibratedAt && <span className="flag flag-ok" title={r.calibrationNote ?? undefined}>Calibrated</span>}
+                  {(c.issues.length > 0 || !r.verified) && <span className="flag flag-warn">⚠ Check</span>}
+                </span>
               </div>
               <div className="text-sm text-muted">{r.outputPerDay ?? "?"} {r.unit}/day · {plural(r.crew.labor.reduce((s, x) => s + x.count, 0), "person", "people")} · {plural(r.crew.equipment.reduce((s, x) => s + x.count, 0), "machine", "machines")}</div>
               <div className="mt-1 text-sm font-semibold text-navy-700">{per != null ? `$${per.toFixed(2)} per ${r.unit} labor + equipment` : "Needs a daily output"}</div>

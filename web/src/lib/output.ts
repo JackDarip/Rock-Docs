@@ -3,7 +3,7 @@ import { POWERED_BY } from "@/config/brand";
 import { bidItemUnitPrices, type EstimateResult } from "./calc";
 import { tablePdf } from "./rfq";
 
-type Company = { id: string; name: string; accentColor: string; logoPath: string | null };
+type Company = { id: string; name: string; accentColor: string; logoPath: string | null; bondingApproach?: string | null };
 type Project = { name: string; jobNumber: string; owner: string | null; projectNumber: string | null; location: string | null; bidDueAt: Date | null };
 
 const m = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -39,7 +39,10 @@ export async function bidSummaryPdf(company: Company, p: Project, est: EstimateR
       ["Direct cost", m(t.direct)], [`Overhead (${t.overheadPct}%)`, m(t.overhead)], [`Markup (${t.markupPct}%)`, m(t.markup)],
       ["Permits", m(t.permits)], [`Bond (${t.bondPct}%)`, m(t.bond)], ["TOTAL BID", m(t.total)],
     ],
-    notes: est.blockers.length ? ["Open issues:", ...est.blockers] : [],
+    notes: [
+      ...(company.bondingApproach ? [`Bonding / insurance approach: ${company.bondingApproach}`] : []),
+      ...(est.blockers.length ? ["Open issues:", ...est.blockers] : []),
+    ],
   });
 }
 

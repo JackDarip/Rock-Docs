@@ -93,3 +93,54 @@ a:focus-visible, button:focus-visible, summary:focus-visible, select:focus-visib
 input[type="file"] { font-size: .85rem; color: var(--color-muted); max-width: 100%; }
 input[type="file"]::file-selector-button { margin-right: .6rem; border: 1px solid var(--color-line); background: #fff; color: var(--color-ink); border-radius: 8px; padding: .35rem .75rem; font-weight: 600; cursor: pointer; }
 input[type="file"]::file-selector-button:hover { background: var(--color-paper); }
+
+/* ---------- Rocket sign-in (see components/RocketSignIn.tsx) ----------
+   The stage shows a crop of the 596×1024 artwork: --cx/--cy/--cw/--ch in image px. */
+.rocket-stage {
+  --cx: 0; --cy: 88; --cw: 596; --ch: 880;
+  position: relative; overflow: hidden; margin-inline: auto;
+  width: clamp(min(100%, 420px), calc((100dvh - 7rem) * var(--cw) / var(--ch)), 600px);
+  aspect-ratio: var(--cw) / var(--ch);
+  --fade-x: linear-gradient(to right, #000 96%, transparent);
+  --fade-y: linear-gradient(to bottom, #000 86%, transparent);
+  -webkit-mask-image: var(--fade-x), var(--fade-y); -webkit-mask-composite: source-in;
+          mask-image: var(--fade-x), var(--fade-y); mask-composite: intersect;
+}
+.rocket-stage[data-error] { width: clamp(min(100%, 400px), calc((100dvh - 10rem) * var(--cw) / var(--ch)), 600px); }
+.rocket-art {
+  position: absolute; container-type: inline-size;
+  width: calc(100% * 596 / var(--cw)); aspect-ratio: 596 / 1024;
+  left: calc(-100% * var(--cx) / var(--cw)); top: calc(-100% * var(--cy) / var(--ch));
+}
+.rocket-field, .rocket-button {
+  position: absolute; transform-origin: 0 0;
+  transform: matrix(0.93606, 0.35184, -0.29237, 0.9563, 0, 0);
+  border-radius: 1.1cqw;
+}
+.rocket-field {
+  background: #fdfdfe; border: 0; color: var(--color-night);
+  padding: 0 2.2cqw; font-size: max(14px, 2.75cqw); font-weight: 500;
+  box-shadow: inset 0 0 0 1px rgba(15,23,42,.08);
+}
+.rocket-field:focus { outline: 2.5px solid var(--color-brand); outline-offset: 1px; }
+.rocket-field[aria-invalid] { box-shadow: inset 0 0 0 2px #f59e0b; }
+.rocket-field:-webkit-autofill { -webkit-box-shadow: 0 0 0 100px #fdfdfe inset; -webkit-text-fill-color: var(--color-night); }
+.rocket-button {
+  background: transparent; border: 0; cursor: pointer; border-radius: 3cqw;
+  color: #fff; font-weight: 700; font-size: max(14px, 2.9cqw);
+  transition: background-color .15s, box-shadow .15s;
+}
+.rocket-button:hover { background: rgba(255,255,255,.14); box-shadow: 0 0 0 2px rgba(255,138,51,.55); }
+.rocket-button:active { background: rgba(0,0,0,.12); }
+.rocket-button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; border-radius: 3cqw; }
+.rocket-button[data-pending] { background: var(--color-brand-600); cursor: progress; }
+/* Phones: zoom in on the rocket so the fields stay thumb-sized. */
+@media (max-width: 639px) {
+  .rocket-stage, .rocket-stage[data-error] {
+    --cx: 150; --cy: 118; --cw: 446; --ch: 692;
+    width: 100%;
+    --fade-x: linear-gradient(to right, transparent, #000 8%, #000 95%, transparent);
+    --fade-y: linear-gradient(to bottom, transparent, #000 5%, #000 88%, transparent);
+  }
+  .rocket-field { font-size: 16px; }
+}

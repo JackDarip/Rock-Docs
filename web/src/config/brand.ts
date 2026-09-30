@@ -1,7 +1,7 @@
 // Single source of truth for product branding. Never hardcode the product
 // name anywhere else: import PRODUCT_NAME / TAGLINE from here.
 
-export const PRODUCT_NAME = "TrueGrade";
+export const PRODUCT_NAME = "rockitdocs";
 export const TAGLINE = "Estimates calibrated to your real costs.";
 export const POWERED_BY = `Powered by ${PRODUCT_NAME}`;
 export const PLATFORM_OWNER = "Answer AI";

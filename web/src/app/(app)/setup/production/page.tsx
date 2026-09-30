@@ -3,6 +3,7 @@ import { loadSetup } from "@/lib/estimate";
 import { PageHeader, Term } from "@/components/ui";
 import { ProductionEditor } from "@/components/ProductionEditor";
 import { StepNav } from "@/components/StepNav";
+import { PRODUCT_NAME } from "@/config/brand";
 
 export default async function ProductionStep() {
   const { db, isAdmin } = await requireCtx();
@@ -10,7 +11,7 @@ export default async function ProductionStep() {
   return (
     <>
       <PageHeader eyebrow="Step 6 of 9" title="Production rates"
-        subtitle={<>Tell TrueGrade what your crews really get done in a day, and who and what is on the crew. That&apos;s your <Term k="production">production rate</Term>; it turns quantities into hours. Any bid can override a rate for that job only.</>} />
+        subtitle={<>Tell {PRODUCT_NAME} what your crews really get done in a day, and who and what is on the crew. That&apos;s your <Term k="production">production rate</Term>; it turns quantities into hours. Any bid can override a rate for that job only.</>} />
       <ProductionEditor rates={s.productionRates} laborRoles={s.laborRoles} equipment={s.equipment} readOnly={!isAdmin} />
       <StepNav current="production" />
     </>

@@ -153,7 +153,7 @@ export async function buildRfqXlsx(h: RfqHeader, lines: RfqLine[]) {
   });
 
   // Machine-readable identity so a returned file matches the right job, category, and revision.
-  const meta = wb.addWorksheet("_truegrade", { state: "veryHidden" });
+  const meta = wb.addWorksheet("_rockitdocs", { state: "veryHidden" });
   meta.addRow(["rfqNumber", h.number]);
   meta.addRow(["revision", h.revision]);
   meta.addRow(["firstLineRow", firstLine]);
@@ -334,7 +334,7 @@ const cellNum = (v: ExcelJS.CellValue) => {
 export async function parseReturnedXlsx(buf: Buffer): Promise<ParsedReturn> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf as any);
-  const meta = wb.getWorksheet("_truegrade");
+  const meta = wb.getWorksheet("_rockitdocs") ?? wb.getWorksheet("_truegrade"); // older files used the previous name
   let rfqNumber: string | null = null;
   if (meta) meta.eachRow((r) => { if (cellText(r.getCell(1).value) === "rfqNumber") rfqNumber = cellText(r.getCell(2).value); });
   const ws = wb.getWorksheet("RFQ") ?? wb.worksheets.find((w) => w.state === "visible")!;

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { resolveQuoteLink } from "@/lib/publicquote";
 import { POWERED_BY } from "@/config/brand";
+import { logoUrl } from "@/lib/logo";
 
 export const dynamic = "force-dynamic";
 
@@ -38,17 +39,36 @@ async function submit(token: string, formData: FormData) {
       };
     }) as any,
   });
-  await db.rfqRecipient.update({ where: { id: recipient.id }, data: { status: "RESPONDED" } });
+  await db.rfqRecipient.update({ where: { id: recipient.id }, data: { status: "RESPONDED", respondedAt: new Date() } });
+  await db.rfqEvent.create({ data: { rfqId: rfq.id, recipientId: recipient.id, type: "RESPONDED", detail: `${recipient.name} submitted prices on the online quote form` } as any });
+  const notify = recipient.createdById ?? r.project?.estimatorId;
+  if (notify) await db.notification.create({ data: { userId: notify, title: `${recipient.name} sent a quote for ${rfq.number}`, body: "It's waiting for your review.", href: `/projects/${rfq.projectId}/quotes/${quote.id}` } as any });
   redirect(`/q/${token}?sent=1`);
 }
 
-export default async function SupplierQuoteForm({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ sent?: string }> }) {
-  const { token } = await params;
-  const { sent } = await searchParams;
+async function decline(token: string, formData: FormData) {
+  "use server";
   const r = await resolveQuoteLink(await hostOf(), token);
-  const shell = (body: React.ReactNode, company?: { name: string; accentColor: string }) => (
+  if ("error" in r) redirect(`/q/${token}`);
+  const { db, recipient, rfq } = r;
+  const reason = z.string().trim().max(1000).parse(String(formData.get("reason") ?? "")) || null;
+  await db.rfqRecipient.update({ where: { id: recipient.id }, data: { status: "DECLINED", declinedAt: new Date(), declineReason: reason } });
+  await db.rfqEvent.create({ data: { rfqId: rfq.id, recipientId: recipient.id, type: "DECLINED", detail: `${recipient.name} declined to quote${reason ? `: ${reason}` : ""}` } as any });
+  const notify = recipient.createdById ?? r.project?.estimatorId;
+  if (notify) await db.notification.create({ data: { userId: notify, title: `${recipient.name} won't quote ${rfq.number}`, body: reason, href: `/projects/${rfq.projectId}/rfqs` } as any });
+  redirect(`/q/${token}?declined=1`);
+}
+
+export default async function SupplierQuoteForm({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ sent?: string; decline?: string; declined?: string }> }) {
+  const { token } = await params;
+  const { sent, decline: askDecline, declined } = await searchParams;
+  const r = await resolveQuoteLink(await hostOf(), token);
+  const shell = (body: React.ReactNode, company?: { name: string; accentColor: string; logoPath?: string | null; updatedAt?: Date }) => (
     <main className="min-h-screen bg-paper">
-      <header className="bg-night px-6 py-4 text-white"><span className="font-display text-2xl font-bold" style={{ color: company?.accentColor }}>{company?.name ?? "Quote request"}</span></header>
+      <header className="flex items-center gap-3 bg-night px-6 py-4 text-white">
+        {company?.logoPath && company.updatedAt && <img src={logoUrl({ logoPath: company.logoPath, updatedAt: company.updatedAt })!} alt="" className="h-10 w-10 rounded-md bg-white object-contain p-0.5" />}
+        <span className="font-display text-2xl font-bold" style={{ color: company?.accentColor }}>{company?.name ?? "Quote request"}</span>
+      </header>
       <div className="mx-auto max-w-5xl p-6">{body}</div>
       <footer className="pb-6 text-center text-xs text-faint">{POWERED_BY}</footer>
     </main>
@@ -57,6 +77,17 @@ export default async function SupplierQuoteForm({ params, searchParams }: { para
     return shell(<div className="card p-8 text-center"><h1 className="text-2xl font-bold">{r.error === "expired" ? "This quote link has expired" : "Quote link not found"}</h1><p className="mt-2 text-muted">Please contact the estimator who sent you the RFQ for a new link.</p></div>, r.error === "expired" ? r.company : undefined);
   }
   const { company, rfq, project, lines, recipient } = r;
+  if (declined) return shell(<div className="card p-8 text-center"><h1 className="text-2xl font-bold">Thanks for letting us know.</h1><p className="mt-2 text-muted">{company.name} won&apos;t send you reminders about RFQ {rfq.number}. Changed your mind? <a className="text-navy-700 underline" href={`/q/${token}`}>You can still send a quote.</a></p></div>, company);
+  if (askDecline && recipient.status !== "RESPONDED") {
+    return shell(
+      <form action={decline.bind(null, token)} className="card mx-auto max-w-xl space-y-4 p-8">
+        <div className="font-mono text-sm text-brand-600">RFQ {rfq.number}</div>
+        <h1 className="text-2xl font-bold">Not quoting this one?</h1>
+        <p className="text-muted">Let {company.name} know so they can plan around it. They won&apos;t send you reminders for this RFQ.</p>
+        <div><label className="label" htmlFor="reason">Reason (optional)</label><textarea id="reason" name="reason" className="input" rows={3} placeholder="e.g. Outside our delivery area, can't meet the spec, too busy this month" /></div>
+        <div className="flex flex-wrap gap-2"><button className="btn btn-primary">Decline to quote</button><a className="btn btn-secondary" href={`/q/${token}`}>Actually, I&apos;ll quote it</a></div>
+      </form>, company);
+  }
   if (sent) return shell(<div className="card p-8 text-center"><h1 className="text-2xl font-bold">Thank you. Your quote was received.</h1><p className="mt-2 text-muted">{company.name} will review it. Reference RFQ {rfq.number}.</p></div>, company);
   return shell(
     <form action={submit.bind(null, token)} className="space-y-6">
@@ -91,6 +122,9 @@ export default async function SupplierQuoteForm({ params, searchParams }: { para
         <div className="md:col-span-2"><label className="label">Exclusions</label><input name="exclusions" className="input" /></div>
         <div className="md:col-span-3"><label className="label">Other notes</label><textarea name="notes" className="input" rows={2} /></div>
       </div>
-      <button className="btn btn-primary">Submit quote</button>
+      <div className="flex flex-wrap items-center gap-4">
+        <button className="btn btn-primary">Submit quote</button>
+        <a className="text-sm text-muted underline hover:text-night" href={`/q/${token}?decline=1`}>Can&apos;t quote this one?</a>
+      </div>
     </form>, company);
 }

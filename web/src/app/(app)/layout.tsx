@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import { NavLinks } from "@/components/NavLinks";
 import { Icon } from "@/components/Icon";
 import { PRODUCT_NAME, POWERED_BY } from "@/config/brand";
+import { logoUrl } from "@/lib/logo";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +15,13 @@ async function signOut() {
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, company, isAdmin } = await requireCtx();
+  const { user, company, isAdmin, db } = await requireCtx();
+  const unread = await db.notification.count({ where: { userId: user.id, readAt: null } });
   const links = [
     { href: "/", label: "Dashboard", icon: "dashboard" },
     { href: "/projects", label: "Bids", icon: "bids" },
+    { href: "/jobs", label: "Past jobs", icon: "history" },
+    { href: "/notifications", label: "Notifications", icon: "bell", badge: unread },
     { href: "/setup", label: "Company Setup", icon: "setup" },
     ...(isAdmin ? [{ href: "/setup/users", label: "Team", icon: "team" }] : []),
     ...(isPlatformAdmin(user) ? [{ href: "/platform", label: "Tenants", icon: "tenants" }] : []),
@@ -29,7 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex items-center gap-2.5 px-5 py-3">
           {company.logoPath ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/api/logo" alt="" className="h-9 w-9 rounded-md bg-white object-contain p-0.5" />
+            <img src={logoUrl(company)!} alt="" className="h-9 w-9 rounded-md bg-white object-contain p-0.5" />
           ) : (
             <span className="flex h-9 w-9 items-center justify-center rounded-md font-bold" style={{ background: company.accentColor }}>{company.name[0]}</span>
           )}

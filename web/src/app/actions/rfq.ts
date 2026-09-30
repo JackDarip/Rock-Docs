@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireCtx, requireAdminCtx } from "@/lib/auth";
 import { enqueue } from "@/lib/jobs";
 import { aiEnabled, assertAiBudget, estimateAiCost } from "@/lib/ai";
-import { newKey, storage } from "@/lib/storage";
+import { newKey, putScanned } from "@/lib/storage";
 import { currentRfqLines, hashLines, parseReturnedXlsx, rfqNumber, similarity } from "@/lib/rfq";
 
 async function project(projectId: string) {
@@ -62,7 +62,7 @@ const recipientSchema = z.object({
   saveToDirectory: z.boolean().optional(),
 });
 
-/** Record an RFQ sent outside TrueGrade so it shows up in the same tracker. */
+/** Record an RFQ sent outside the app so it shows up in the same tracker. */
 export async function markSent(rfqId: string, recipients: unknown[], sentAt: string | null) {
   const { db, user } = await requireCtx();
   const rfq = await db.rfq.findUnique({ where: { id: rfqId } });
@@ -78,20 +78,23 @@ export async function markSent(rfqId: string, recipients: unknown[], sentAt: str
       supplierId = s.id;
     }
     const expires = new Date(Math.max(Date.now() + 30 * 864e5, (p?.quoteDueAt?.getTime() ?? 0) + 14 * 864e5));
-    await db.rfqRecipient.create({
+    const rec = await db.rfqRecipient.create({
       data: {
         rfqId, supplierId, name: r.name, email: r.email ?? null, method: "OUTSIDE", status: "SENT",
         sentAt: sentAt ? new Date(sentAt) : new Date(), token: crypto.randomBytes(24).toString("base64url"), tokenExpiresAt: expires, createdById: user.id,
       } as any,
     });
+    await db.rfqEvent.create({ data: { rfqId, recipientId: rec.id, userId: user.id, type: "MARKED_SENT", detail: `${user.name} recorded it as sent to ${r.name}${r.email ? ` (${r.email})` : ""} outside the app` } as any });
   }
   revalidatePath(`/projects/${rfq.projectId}/rfqs`);
   return { ok: true };
 }
 
 export async function setRecipientStatus(id: string, status: "SENT" | "RESPONDED" | "DECLINED") {
-  const { db } = await requireCtx();
-  const r = await db.rfqRecipient.update({ where: { id }, data: { status } });
+  const { db, user } = await requireCtx();
+  if (!["SENT", "RESPONDED", "DECLINED"].includes(status)) return;
+  const r = await db.rfqRecipient.update({ where: { id }, data: { status, ...(status === "RESPONDED" ? { respondedAt: new Date() } : status === "DECLINED" ? { declinedAt: new Date() } : {}) } });
+  await db.rfqEvent.create({ data: { rfqId: r.rfqId, recipientId: r.id, userId: user.id, type: "STATUS", detail: `${user.name} marked ${r.name} as ${status.toLowerCase()}` } as any });
   const rfq = await db.rfq.findUnique({ where: { id: r.rfqId } });
   if (rfq) revalidatePath(`/projects/${rfq.projectId}/rfqs`);
 }
@@ -108,9 +111,10 @@ export async function uploadQuotes(projectId: string, formData: FormData) {
   for (const file of files) {
     const buf = Buffer.from(await file.arrayBuffer());
     const key = newKey(company.id, `projects/${projectId}/quotes`, file.name);
-    await storage.put(company.id, key, buf);
+    let scan;
+    try { scan = await putScanned(company.id, key, buf); } catch (e) { out.push({ file: file.name, status: e instanceof Error ? e.message : "Upload refused" }); continue; }
     const doc = await db.document.create({
-      data: { projectId, filename: file.name, storageKey: key, size: buf.length, mime: file.type || "application/octet-stream", kind: "QUOTE", kindConfirmed: true, status: "READY", uploadedById: user.id } as any,
+      data: { projectId, filename: file.name, storageKey: key, size: buf.length, mime: file.type || "application/octet-stream", kind: "QUOTE", kindConfirmed: true, status: "READY", scanStatus: scan, uploadedById: user.id } as any,
     });
     if (/\.xlsx$/i.test(file.name)) {
       const parsed = await parseReturnedXlsx(buf);
@@ -241,4 +245,23 @@ export async function approvePriceUpdates(projectId: string) {
   }
   revalidatePath(`/projects/${projectId}`, "layout");
   return n;
+}
+
+/** A quote that arrived as email text: pasted or forwarded. Saved as a source document, read by AI, then reviewed like any other. */
+export async function pasteQuoteText(projectId: string, text: string, supplierId: string | null) {
+  const { db, company, user } = await project(projectId);
+  const body = z.string().trim().min(20, "Paste the whole email, including prices").max(200_000).safeParse(text);
+  if (!body.success) return { ok: false as const, error: body.error.issues[0].message };
+  if (!aiEnabled()) return { ok: false as const, error: "AI reading isn't switched on for this server. Enter the quote by hand from the Compare page instead." };
+  try { await assertAiBudget(company.id, estimateAiCost(2).usd); } catch (e: any) { return { ok: false as const, error: e.message }; }
+  const sup = supplierId ? await db.supplier.findUnique({ where: { id: supplierId } }) : null;
+  const name = `Email quote${sup ? ` - ${sup.name}` : ""} ${new Date().toISOString().slice(0, 10)}.txt`;
+  const key = newKey(company.id, `projects/${projectId}/quotes`, name);
+  const buf = Buffer.from(body.data, "utf8");
+  await putScanned(company.id, key, buf);
+  const doc = await db.document.create({ data: { projectId, filename: name, storageKey: key, size: buf.length, mime: "text/plain", kind: "QUOTE", kindConfirmed: true, status: "READY", uploadedById: user.id } as any });
+  const quote = await db.quote.create({ data: { projectId, supplierId: sup?.id ?? null, supplierName: sup?.name ?? null, source: "EMAIL", documentId: doc.id } as any });
+  await enqueue(company.id, "EXTRACT_QUOTE", { documentId: doc.id, quoteId: quote.id });
+  revalidatePath(`/projects/${projectId}/quotes`);
+  return { ok: true as const };
 }

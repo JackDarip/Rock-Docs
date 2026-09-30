@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateCompany, uploadLogo } from "@/app/actions/setup";
+import { useRouter } from "next/navigation";
+import { updateCompany, uploadLogo, removeLogo } from "@/app/actions/setup";
+import { logoUrl } from "@/lib/logo";
 import { GLOSSARY } from "@/config/glossary";
 import { FilePicker } from "./FilePicker";
 
@@ -53,7 +55,6 @@ function Field({ label, field, value, save, msg, type = "text", suffix, term, re
 export function CompanyForm({ company, readOnly }: { company: C; readOnly: boolean }) {
   const { msg, save } = useSaver();
   const [types, setTypes] = useState<string[]>(company.projectTypes ?? []);
-  const [logoMsg, setLogoMsg] = useState("");
   const f = (field: string, label: string, extra: Partial<Parameters<typeof Field>[0]> = {}) => (
     <Field key={field} field={field} label={label} value={company[field]} save={save} msg={msg[field]} readOnly={readOnly} {...extra} />
   );
@@ -68,17 +69,8 @@ export function CompanyForm({ company, readOnly }: { company: C; readOnly: boole
         <h2 className="text-xl font-bold">Identity</h2>
         {f("name", "Company name")}
         {f("rfqPrefix", "RFQ number prefix", { help: "Starts every RFQ number, e.g. IR-2026-0142-AGG-R0." })}
-        <div className="grid grid-cols-2 gap-4">
-          {f("accentColor", "Accent color", { type: "color", help: "Leads your estimate PDFs and RFQ spreadsheets." })}
-          <div>
-            <label className="label">Logo</label>
-            <form action={async (fd) => { const r = await uploadLogo(fd); setLogoMsg(r.ok ? "Uploaded ✓ (refresh to see it)" : `⚠ ${r.error}`); }}>
-              <FilePicker name="logo" accept="image/png,image/jpeg" disabled={readOnly} label="Choose image" />
-              <button className="btn btn-primary btn-sm mt-2" disabled={readOnly}>Upload logo</button>
-            </form>
-            {logoMsg && <p className="mt-1 text-xs text-muted">{logoMsg}</p>}
-          </div>
-        </div>
+        {f("accentColor", "Accent color", { type: "color", help: "Leads your estimate PDFs and RFQ spreadsheets." })}
+        <LogoField initial={logoUrl(company as any)} name={company.name} accent={company.accentColor} readOnly={readOnly} />
         <div>
           <label className="label">Project types you bid</label>
           <div className="flex flex-wrap gap-2">
@@ -112,6 +104,47 @@ export function CompanyForm({ company, readOnly }: { company: C; readOnly: boole
         {f("rfqBody", "Message body", { type: "textarea", rows: 6 })}
         {f("rfqSignature", "Signature", { type: "textarea", rows: 3 })}
       </section>
+    </div>
+  );
+}
+
+/** Logo upload with a live preview. Shows in the sidebar, on the sign-in page,
+ * on supplier quote forms, and on every PDF and RFQ spreadsheet. */
+function LogoField({ initial, name, accent, readOnly }: { initial: string | null; name: string; accent: string; readOnly: boolean }) {
+  const [url, setUrl] = useState(initial);
+  const [msg, setMsg] = useState("");
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  return (
+    <div>
+      <label className="label">Logo</label>
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-white">
+          {url
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={url} alt={`${name} logo`} className="max-h-full max-w-full object-contain p-1.5" />
+            : <span className="flex h-14 w-14 items-center justify-center rounded-lg text-2xl font-bold text-white" style={{ background: accent }}>{name[0]}</span>}
+        </div>
+        <div className="min-w-0 flex-1">
+          <form action={(fd) => start(async () => {
+            setMsg("Uploading…");
+            const r = await uploadLogo(fd);
+            if (r.ok) { setUrl(r.url); setMsg("Saved ✓ Your logo now shows in the sidebar, sign-in page, supplier quote forms, PDFs and RFQ spreadsheets."); router.refresh(); }
+            else setMsg(`⚠ ${r.error}`);
+          })}>
+            <FilePicker name="logo" accept="image/png,image/jpeg" disabled={readOnly || pending} label={url ? "Replace image" : "Choose image"} />
+            <div className="mt-2 flex gap-2">
+              <button className="btn btn-primary btn-sm" disabled={readOnly || pending}>{pending ? "Uploading…" : "Upload logo"}</button>
+              {url && !readOnly && (
+                <button type="button" className="btn btn-secondary btn-sm" disabled={pending}
+                  onClick={() => start(async () => { await removeLogo(); setUrl(null); setMsg("Logo removed."); router.refresh(); })}>Remove</button>
+              )}
+            </div>
+          </form>
+          <p className="mt-1 text-xs text-muted">PNG or JPG, under 3 MB. A square or wide logo on a white or transparent background works best.</p>
+          {msg && <p className={`mt-1 text-xs ${msg.startsWith("⚠") ? "text-warn" : "text-ok"}`}>{msg}</p>}
+        </div>
+      </div>
     </div>
   );
 }
