@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireCtx, destroySession, isPlatformAdmin } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
@@ -48,6 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="border-t border-white/10 px-5 py-3 text-xs text-mist/70">
           <div className="truncate text-sm text-mist" title={user.name}>{user.name}</div>
           <div className="truncate" title={user.email}>{user.email}</div>
+          <Link href="/account" className="mt-1 inline-block text-xs font-semibold text-mist hover:text-white">Change password</Link>
           <div className="mt-2 flex items-center justify-between gap-2">
             <form action={signOut}>
               <button className="-ml-2 flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-semibold text-mist hover:bg-white/5 hover:text-white"><Icon name="signout" size={16} />Sign out</button>
