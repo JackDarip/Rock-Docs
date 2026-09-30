@@ -25,5 +25,5 @@ export const GLOSSARY: Record<string, string> = {
   bond: "Bid, performance and payment bonds guarantee the job to the owner. Usually priced as a percentage of the contract.",
   confidence: "How much of this number comes from values a person verified, supplier quotes, or past-job calibration, versus values that are missing, stale, or unconfirmed.",
   override: "A value changed for this job only. Your company defaults stay the same for other bids.",
-  spf: "DNS records that prove to email providers that TrueGrade is allowed to send on your domain's behalf, so RFQs don't land in spam.",
+  spf: "DNS records that prove to email providers that rockitdocs is allowed to send on your domain's behalf, so RFQs don't land in spam.",
 };

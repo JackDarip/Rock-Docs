@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { updateSheet } from "@/app/actions/project";
+import { SheetThumb } from "./SheetThumb";
 
 export const SHEET_CLASSES: [string, string][] = [
   ["cover", "Cover / index"], ["general_notes", "General notes"], ["quantity_summary", "Quantity summary"], ["grading", "Grading"],
@@ -32,10 +33,11 @@ export function SheetIndex({ projectId, sheets, docs }: { projectId: string; she
       </div>
       <div className="max-h-[520px] overflow-auto rounded-xl border border-line">
         <table className="tbl">
-          <thead><tr><th>Page</th><th>Sheet #</th><th>Title</th><th>Type</th><th>Discipline</th><th>Scale</th><th /></tr></thead>
+          <thead><tr><th>Preview</th><th>Page</th><th>Sheet #</th><th>Title</th><th>Type</th><th>Discipline</th><th>Scale</th><th /></tr></thead>
           <tbody>
             {filtered.map((s) => (
               <tr key={s.id}>
+                <td><SheetThumb docId={s.documentId} pageIndex={s.pageIndex} href={`/projects/${projectId}/viewer?doc=${s.documentId}&page=${s.pageIndex + 1}`} /></td>
                 <td className="text-xs text-muted">{docs.length > 1 && <div className="max-w-32 truncate">{docName(s.documentId)}</div>}p. {s.pageIndex + 1}</td>
                 <td><input className="cell-input w-20 font-mono" defaultValue={s.sheetNumber ?? ""} onBlur={(e) => patch(s.id, { sheetNumber: e.target.value || null })} /></td>
                 <td><input className="cell-input" defaultValue={s.title ?? ""} onBlur={(e) => patch(s.id, { title: e.target.value || null })} /></td>

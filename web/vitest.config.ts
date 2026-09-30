@@ -7,7 +7,7 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 30000,
     env: {
-      DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/truegrade_test",
+      DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/rockitdocs_test",
       STORAGE_DIR: "./storage-test",
     },
   },

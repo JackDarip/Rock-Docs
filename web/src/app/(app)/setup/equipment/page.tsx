@@ -2,10 +2,16 @@ import { requireCtx } from "@/lib/auth";
 import { PageHeader, Card, Term } from "@/components/ui";
 import { EditableTable } from "@/components/EditableTable";
 import { StepNav } from "@/components/StepNav";
+import { SetupImport } from "@/components/SetupImport";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { aiEnabled } from "@/lib/ai";
 
 export default async function EquipmentStep() {
   const { db, isAdmin } = await requireCtx();
-  const rows = await db.equipment.findMany({ orderBy: { name: "asc" } });
+  const [rows, drafts] = await Promise.all([
+    db.equipment.findMany({ orderBy: { name: "asc" } }),
+    db.importDraft.findMany({ where: { kind: "EQUIPMENT", status: { not: "DONE" } }, orderBy: { createdAt: "asc" } }),
+  ]);
   return (
     <>
       <PageHeader eyebrow="Step 3 of 9" title="Equipment"
@@ -23,6 +29,11 @@ export default async function EquipmentStep() {
             { key: "mobilizationCost", label: "Move cost", type: "money", term: "mobilization" },
             { key: "notes", label: "Notes" },
           ]} />
+      </Card>
+      <Card title="Import from an equipment cost report" className="mt-6">
+        <AutoRefresh active={drafts.some((d) => d.status === "PROCESSING")} ms={4000} />
+        <p className="mb-3 text-sm text-muted">Upload your internal equipment cost report or a rate sheet. The AI reads each machine&apos;s hourly costs; you tick the rows to add.</p>
+        <SetupImport kind="EQUIPMENT" readOnly={!isAdmin} aiOn={aiEnabled()} roles={[]} drafts={drafts.map((d) => ({ id: d.id, filename: d.filename, status: d.status, statusDetail: d.statusDetail, meta: d.meta, rows: d.rows as any[] }))} />
       </Card>
       <StepNav current="equipment" />
     </>

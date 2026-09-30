@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireCtx } from "@/lib/auth";
 import { duplicateProject } from "@/app/actions/project";
+import { closeOutProject } from "@/app/actions/jobs";
 import { Card } from "@/components/ui";
 import { ProjectForm } from "@/components/ProjectForm";
 
@@ -8,6 +9,7 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
   const { id } = await params;
   const { db, company } = await requireCtx();
   const p = (await db.project.findUnique({ where: { id } }))!;
+  const closeout = await db.historicalJob.findFirst({ where: { projectId: id, kind: "CLOSEOUT" } });
   const [docs, items, confirmed, maps, lines, rfqs, quotes] = await Promise.all([
     db.document.count({ where: { projectId: id, kind: { not: "QUOTE" } } }),
     db.bidItem.count({ where: { projectId: id } }),
@@ -42,6 +44,12 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
           ))}
         </ol>
         <form action={duplicateProject.bind(null, id)} className="mt-4 border-t border-line pt-4"><button className="btn btn-secondary btn-sm">Duplicate this bid</button></form>
+        <div className="mt-4 border-t border-line pt-4">
+          <div className="font-semibold">After the job</div>
+          <p className="mb-2 text-xs text-muted">Won it and built it? Enter or upload the final costs against this estimate. They feed the same review and calibration as past jobs.</p>
+          {closeout ? <Link className="btn btn-secondary btn-sm" href={`/jobs/${closeout.id}`}>Open close-out</Link>
+            : <form action={closeOutProject.bind(null, id)}><button className="btn btn-secondary btn-sm">Close out this job</button></form>}
+        </div>
       </Card>
       <div className="space-y-6 lg:col-span-2">
         <Card title="Project info">

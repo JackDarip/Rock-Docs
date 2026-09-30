@@ -1,5 +1,5 @@
 {
-  "name": "truegrade",
+  "name": "rockitdocs",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,7 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "postinstall": "node scripts/copy-pdf-worker.mjs && prisma generate",
-    "worker": "tsx scripts/worker.ts"
+    "worker": "tsx --conditions=react-server scripts/worker.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",

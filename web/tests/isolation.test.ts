@@ -32,6 +32,18 @@ beforeAll(async () => {
   ids.rfq = rfq.id;
   ids.token = crypto.randomBytes(24).toString("base64url");
   await dbA.rfqRecipient.create({ data: { rfqId: rfq.id, name: "Supplier", token: ids.token, tokenExpiresAt: new Date(Date.now() + 864e5) } as any });
+  // Newer tenant data: past jobs and their files, emails, mailbox tokens, surfaces, scope packages, notifications.
+  const job = await dbA.historicalJob.create({ data: { name: "Secret past job" } as any });
+  ids.job = job.id;
+  const jkey = newKey(A.id, `jobs/${job.id}`, "costs.pdf");
+  await storage.put(A.id, jkey, Buffer.from("%PDF secret costs"));
+  ids.jobFile = (await dbA.jobCostFile.create({ data: { jobId: job.id, filename: "costs.pdf", storageKey: jkey, mime: "application/pdf", size: 17 } as any })).id;
+  ids.jobLine = (await dbA.jobCostLine.create({ data: { jobId: job.id, activity: "Secret activity", actualCost: 999 } as any })).id;
+  ids.email = (await dbA.emailMessage.create({ data: { kind: "RFQ", method: "LOG", fromAddress: "a@a.com", toAddress: "s@s.com", subject: "Secret", text: "prices" } as any })).id;
+  ids.mailbox = (await dbA.mailboxConnection.create({ data: { userId: "u", provider: "GOOGLE", email: "a@gmail.com", accessTokenEnc: "enc", expiresAt: new Date(), dailyLimit: 500 } as any })).id;
+  ids.scope = (await dbA.scopePackage.create({ data: { projectId: p.id, name: "Secret scope" } as any })).id;
+  ids.notification = (await dbA.notification.create({ data: { userId: "u", title: "Secret" } as any })).id;
+  ids.surface = (await dbA.surface.create({ data: { projectId: p.id, documentId: ids.document, name: "EG", pointCount: 3, faceCount: 1, units: "feet", bbox: [0, 0, 1, 1], dataKey: key } as any })).id;
   ids.expiredToken = crypto.randomBytes(24).toString("base64url");
   await dbA.rfqRecipient.create({ data: { rfqId: rfq.id, name: "Old", token: ids.expiredToken, tokenExpiresAt: new Date(Date.now() - 1000) } as any });
 });
@@ -73,6 +85,20 @@ describe("record isolation", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("tenant B cannot see tenant A's past jobs, emails, mailbox tokens, surfaces, scopes or notifications", async () => {
+    const dbB = tenantDb(B.id);
+    expect(await dbB.historicalJob.findUnique({ where: { id: ids.job } })).toBeNull();
+    expect(await dbB.jobCostFile.findUnique({ where: { id: ids.jobFile } })).toBeNull();
+    expect(await dbB.jobCostLine.findMany()).toHaveLength(0);
+    expect(await dbB.emailMessage.findUnique({ where: { id: ids.email } })).toBeNull();
+    expect(await dbB.mailboxConnection.findMany()).toHaveLength(0);
+    expect(await dbB.scopePackage.findUnique({ where: { id: ids.scope } })).toBeNull();
+    expect(await dbB.notification.findMany()).toHaveLength(0);
+    expect(await dbB.surface.findUnique({ where: { id: ids.surface } })).toBeNull();
+    const upd = await dbB.jobCostLine.updateMany({ where: { id: ids.jobLine }, data: { actualCost: 0 } });
+    expect(upd.count).toBe(0);
+  });
+
   it("the Company table is not reachable through a tenant client", async () => {
     await expect((tenantDb(B.id) as any).company.findMany()).rejects.toThrow();
   });
@@ -87,6 +113,12 @@ describe("file isolation", () => {
 
   it("the document lookup used by the file download route returns nothing for another tenant", async () => {
     expect(await tenantDb(B.id).document.findUnique({ where: { id: ids.document } })).toBeNull();
+  });
+
+  it("past-job source files are scoped the same way", async () => {
+    expect(await tenantDb(B.id).jobCostFile.findUnique({ where: { id: ids.jobFile } })).toBeNull();
+    const f = await tenantDb(A.id).jobCostFile.findUniqueOrThrow({ where: { id: ids.jobFile } });
+    await expect(storage.get(B.id, f.storageKey)).rejects.toThrow(/does not belong/);
   });
 });
 

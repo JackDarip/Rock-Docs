@@ -5,6 +5,7 @@ import { Uploader } from "@/components/Uploader";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { DocKind, AckAddendum, DeleteDoc, ExtractSchedule } from "@/components/DocActions";
 import { SheetIndex } from "@/components/SheetIndex";
+import { PRODUCT_NAME } from "@/config/brand";
 
 const mb = (n: number) => `${(n / 1048576).toFixed(n > 1048576 * 10 ? 0 : 1)} MB`;
 
@@ -40,9 +41,9 @@ export default async function Documents({ params }: { params: Promise<{ id: stri
       )}
       <Card title="Bid package">
         {docs.length === 0 ? (
-          <EmptyState title="Nothing uploaded yet" body="Upload the documents the owner issued. TrueGrade splits the plan set into sheets, reads title blocks, and suggests what each file is for you to confirm." />
+          <EmptyState title="Nothing uploaded yet" body={`Upload the documents the owner issued. ${PRODUCT_NAME} splits the plan set into sheets, reads title blocks, and suggests what each file is for you to confirm.`} />
         ) : (
-          <table className="tbl">
+          <div className="overflow-x-auto"><table className="tbl">
             <thead><tr><th>File</th><th>What it is</th><th>Pages</th><th>Status</th><th>Uploaded</th><th /></tr></thead>
             <tbody>
               {docs.map((d) => (
@@ -55,19 +56,23 @@ export default async function Documents({ params }: { params: Promise<{ id: stri
                     <div className="mt-0.5 text-muted">{d.statusDetail}</div>
                   </td>
                   <td className="text-xs text-muted">{fmtDateTime(d.createdAt)}</td>
-                  <td className="space-y-1 whitespace-nowrap text-right">
-                    {d.mime === "application/pdf" && d.status === "READY" && <Link className="btn btn-secondary btn-sm" href={`/projects/${id}/viewer?doc=${d.id}`}>Open sheets</Link>}
-                    {d.mime === "application/pdf" && d.status === "READY" && (d.kind === "BID_SCHEDULE" || d.kind === "PLANS" || d.kind === "ADDENDUM") && <div className="relative inline-block"><ExtractSchedule id={d.id} pageCount={d.pageCount} /></div>}
+                  <td className="text-right">
+                    <div className="flex flex-col items-end gap-1">
+                    {d.mime === "application/pdf" && d.status === "READY" && <Link className="btn btn-secondary btn-sm whitespace-nowrap" href={`/projects/${id}/viewer?doc=${d.id}`}>Open sheets</Link>}
+                    {d.mime === "application/pdf" && d.status === "READY" && (d.kind === "BID_SCHEDULE" || d.kind === "PLANS") && <div className="relative inline-block"><ExtractSchedule id={d.id} pageCount={d.pageCount} /></div>}
+                    {d.kind === "ADDENDUM" && <Link className="whitespace-nowrap text-xs font-semibold text-navy-700 hover:underline" href={`/projects/${id}/addenda`}>See what changed →</Link>}
+                    {d.kind === "CAD" && /\.(xml|landxml)$/i.test(d.filename) && <Link className="whitespace-nowrap text-xs font-semibold text-navy-700 hover:underline" href={`/projects/${id}/earthwork`}>Earthwork →</Link>}
                     {d.kind === "QUOTE" && <div><Link className="whitespace-nowrap text-xs text-navy-700 hover:underline" href={`/projects/${id}/quotes`}>Add it under Quotes →</Link></div>}
                     <div><DeleteDoc id={d.id} name={d.filename} /></div>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
         {addenda.length > 0 && (
-          <p className="mt-3 text-sm text-muted">Addenda: {addenda.map((a) => `#${a.addendumNumber ?? "?"} ${a.acknowledged ? "✓ acknowledged" : "not yet acknowledged"}`).join(" · ")}. Automatic before/after diffing of addenda is on the roadmap; for now, update affected bid items and regenerate RFQs (they revise automatically).</p>
+          <p className="mt-3 text-sm text-muted">Addenda: {addenda.map((a) => `#${a.addendumNumber ?? "?"} ${a.acknowledged ? "✓ acknowledged" : "not yet acknowledged"}`).join(" · ")}. <Link className="font-semibold text-navy-700 hover:underline" href={`/projects/${id}/addenda`}>See what changed and accept it →</Link></p>
         )}
       </Card>
       {planDocs.length > 0 && (

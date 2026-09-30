@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { calibrateSheet, deleteMarkup, saveMarkup } from "@/app/actions/project";
+import { runMeasureSuggestions, pageSuggestions, decideSuggestion } from "@/app/actions/measure";
 import { GLOSSARY } from "@/config/glossary";
 import { Icon } from "./Icon";
 
 type Pt = [number, number];
-type Markup = { id: string; documentId: string; pageIndex: number; bidItemId: string | null; tool: string; points: Pt[]; quantity: number; unit: string; color: string; label: string | null };
+type Markup = { id: string; documentId: string; pageIndex: number; bidItemId: string | null; tool: string; points: Pt[]; quantity: number; unit: string; color: string; label: string | null; source?: string };
+type Suggestion = { id: string; pageIndex: number; kind: string; label: string; quantity: number; unit: string; points: Pt[]; evidence: string | null; confidence: string };
 type Sheet = { pageIndex: number; sheetNumber: string | null; title: string | null; feetPerUnit: number | null; scaleText: string | null };
 type BidItem = { id: string; itemNumber: string; description: string; unit: string };
 type Tool = "pan" | "calibrate" | "LINEAR" | "POLYLINE" | "AREA" | "COUNT";
@@ -23,9 +25,9 @@ function statedFeetPerUnit(scaleText: string | null) {
   return m ? Number(m[1]) / 72 : null;
 }
 
-export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, markups: initialMarkups, initialPage, focusMarkupId }: {
+export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, markups: initialMarkups, initialPage, focusMarkupId, aiOn = false }: {
   projectId: string; doc: { id: string; filename: string; pageCount: number | null };
-  sheets: Sheet[]; bidItems: BidItem[]; markups: Markup[]; initialPage: number; focusMarkupId?: string | null;
+  sheets: Sheet[]; bidItems: BidItem[]; markups: Markup[]; initialPage: number; focusMarkupId?: string | null; aiOn?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -47,6 +49,10 @@ export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, ma
   const [q, setQ] = useState("");
   const [focus, setFocus] = useState<string | null>(focusMarkupId ?? null);
   const [notice, setNotice] = useState("");
+  const [sugs, setSugs] = useState<Suggestion[]>([]);
+  const [sgRunning, setSgRunning] = useState(false);
+  const [sgEdit, setSgEdit] = useState<Record<string, { qty: string; bidItemId: string }>>({});
+  const [sgFocus, setSgFocus] = useState<string | null>(null);
 
   const sheet = sheets.find((s) => s.pageIndex === page - 1);
   const fpu = sheet?.feetPerUnit ?? null;
@@ -72,6 +78,20 @@ export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, ma
     })();
     return () => { cancelled = true; pdfRef.current?.destroy?.(); };
   }, [doc.id]);
+
+  // AI suggestions for this sheet (amber until someone accepts, edits or rejects them).
+  useEffect(() => {
+    let stop = false;
+    let tries = 0;
+    const load = async () => {
+      const r = await pageSuggestions(doc.id, page - 1);
+      if (stop) return;
+      setSugs(r.suggestions); setSgRunning(r.running);
+      if (r.running && tries++ < 80) setTimeout(load, 3000);
+    };
+    void load();
+    return () => { stop = true; };
+  }, [doc.id, page, sgRunning]);
 
   // Render only the current page at the current zoom.
   useEffect(() => {
@@ -241,10 +261,17 @@ export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, ma
               onClick={onClick} onDoubleClick={() => void finish()} onMouseMove={(e) => tool !== "pan" && setHover(toPt(e))} onMouseLeave={() => setHover(null)}>
               {pageMarkups.map((m) => {
                 const sw = (focus === m.id ? 5 : 2.5) / zoom;
+                if (m.source === "AI_ACCEPTED") return <g key={m.id} onClick={(e) => { e.stopPropagation(); setFocus(m.id); }}>{m.points.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={9 / zoom} fill={m.color} fillOpacity={0.35} stroke={m.color} strokeWidth={sw} />)}<text x={m.points[0][0] + 12 / zoom} y={m.points[0][1] - 6 / zoom} fontSize={11 / zoom} fill={m.color} fontWeight={700} style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 3 / zoom }}>{m.quantity} {m.unit}</text></g>;
                 if (m.tool === "COUNT") return <circle key={m.id} cx={m.points[0][0]} cy={m.points[0][1]} r={7 / zoom} fill={m.color} fillOpacity={0.5} stroke={m.color} strokeWidth={sw} onClick={(e) => { e.stopPropagation(); setFocus(m.id); }} />;
                 const d = m.points.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join(" ") + (m.tool === "AREA" ? " Z" : "");
                 return <path key={m.id} d={d} fill={m.tool === "AREA" ? m.color : "none"} fillOpacity={0.18} stroke={m.color} strokeWidth={sw} onClick={(e) => { e.stopPropagation(); setFocus(m.id); }} />;
               })}
+              {sugs.map((sg) => sg.points.map((p, i) => (
+                <g key={`${sg.id}-${i}`} onClick={(e) => { e.stopPropagation(); setSgFocus(sg.id); }} style={{ cursor: "pointer" }}>
+                  <circle cx={p[0]} cy={p[1]} r={(sgFocus === sg.id ? 16 : 11) / zoom} fill="#F59E0B" fillOpacity={0.18} stroke="#B45309" strokeWidth={2 / zoom} strokeDasharray={`${4 / zoom}`} />
+                  {i === 0 && <text x={p[0] + 14 / zoom} y={p[1] - 8 / zoom} fontSize={11 / zoom} fill="#92400E" fontWeight={700} style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 3 / zoom }}>AI · {sg.label} {sg.quantity} {sg.unit}</text>}
+                </g>
+              )))}
               {draft.length > 0 && (
                 <path d={[...draft, ...(hover ? [hover] : [])].map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join(" ") + (tool === "AREA" && draft.length > 1 ? " Z" : "")}
                   fill={tool === "AREA" ? "#FF6B00" : "none"} fillOpacity={0.12} stroke={tool === "calibrate" ? "#0B1B33" : "#FF6B00"} strokeDasharray={`${6 / zoom}`} strokeWidth={2 / zoom} />
@@ -286,6 +313,38 @@ export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, ma
           )}
           <p className="mt-2 text-xs text-muted">Apply these to bid items under Bid items &amp; takeoff.</p>
         </div>
+        <div className="rounded-xl border border-amber-300 bg-amber-50/60 p-3">
+          <div className="label">AI suggestions for this sheet</div>
+          {!aiOn ? <p className="text-xs text-muted">AI suggestions aren&apos;t switched on for this server.</p> : (
+            <button className="btn btn-secondary btn-sm" disabled={sgRunning} onClick={async () => { const r = await runMeasureSuggestions(projectId, doc.id, page - 1); if (!r.ok) setNotice(r.error); else setSgRunning(true); }}>{sgRunning ? "Reading the sheet…" : sugs.length ? "Suggest again" : "Suggest quantities"}</button>
+          )}
+          <p className="mt-1 text-xs text-muted">Reads pipe runs, structure counts and paved areas from this sheet&apos;s callouts. Least reliable source: every suggestion stays amber until you accept, edit or reject it.</p>
+          <ul className="mt-2 space-y-2">
+            {sugs.map((sg) => {
+              const ed = sgEdit[sg.id] ?? { qty: String(sg.quantity), bidItemId };
+              return (
+                <li key={sg.id} className={`rounded-lg border bg-white p-2 text-xs ${sgFocus === sg.id ? "border-amber-500" : "border-amber-200"}`} onMouseEnter={() => setSgFocus(sg.id)}>
+                  <div className="flex items-center justify-between gap-2"><strong className="text-sm">{sg.label}</strong>{sg.confidence === "LOW" && <span className="flag flag-warn">low confidence</span>}</div>
+                  {sg.evidence && <p className="mt-0.5 text-muted">{sg.evidence}</p>}
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <input aria-label="Quantity" className="cell-input w-20 text-right" inputMode="decimal" value={ed.qty} onChange={(e) => setSgEdit({ ...sgEdit, [sg.id]: { ...ed, qty: e.target.value } })} /><span>{sg.unit}</span>
+                    <select aria-label="Bid item" className="cell-input min-w-0 flex-1" value={ed.bidItemId} onChange={(e) => setSgEdit({ ...sgEdit, [sg.id]: { ...ed, bidItemId: e.target.value } })}>
+                      <option value="">— bid item —</option>{bidItems.map((b) => <option key={b.id} value={b.id}>{b.itemNumber} {b.description.slice(0, 28)}</option>)}
+                    </select>
+                  </div>
+                  <div className="mt-1.5 flex gap-1.5">
+                    <button className="btn btn-primary btn-sm" onClick={async () => {
+                      const r = await decideSuggestion(projectId, sg.id, true, { quantity: Number(ed.qty) || sg.quantity, bidItemId: ed.bidItemId || null, color: colorFor(ed.bidItemId || null) });
+                      if (r.ok && r.markup) setMarkups((ms) => [...ms, r.markup as Markup]);
+                      setSugs((x) => x.filter((y) => y.id !== sg.id));
+                    }}>Accept</button>
+                    <button className="btn btn-secondary btn-sm" onClick={async () => { await decideSuggestion(projectId, sg.id, false); setSugs((x) => x.filter((y) => y.id !== sg.id)); }}>Reject</button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
         <div className="min-h-0 rounded-xl border border-line bg-white p-3">
           <div className="label">Markups on this sheet</div>
           {pageMarkups.length === 0 && <p className="text-xs text-muted">None yet.</p>}
@@ -294,7 +353,7 @@ export function PlanViewer({ projectId, doc, sheets: initialSheets, bidItems, ma
               <li key={m.id} className={`flex items-center justify-between gap-2 rounded px-1 ${focus === m.id ? "bg-brand-50" : ""}`}>
                 <button className="truncate text-left" onClick={() => setFocus(m.id)}>
                   <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full" style={{ background: m.color }} />
-                  {m.tool.toLowerCase()} · {m.quantity.toLocaleString("en-US", { maximumFractionDigits: 2 })} {m.unit}
+                  {m.source === "AI_ACCEPTED" ? "AI" : m.tool.toLowerCase()} · {m.quantity.toLocaleString("en-US", { maximumFractionDigits: 2 })} {m.unit}
                   <span className="text-xs text-muted"> {bidItems.find((b) => b.id === m.bidItemId)?.itemNumber ?? ""}</span>
                 </button>
                 <button className="text-faint hover:text-danger" onClick={async () => { await deleteMarkup(projectId, m.id); setMarkups((ms) => ms.filter((x) => x.id !== m.id)); }}>✕</button>

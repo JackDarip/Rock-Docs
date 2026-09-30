@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { Icon } from "./Icon";
 
 /** Main sidebar navigation. When a bid is open, its sections render under "Bids" (see ProjectNav). */
-export function NavLinks({ links }: { links: { href: string; label: string; icon: string }[] }) {
+export function NavLinks({ links }: { links: { href: string; label: string; icon: string; badge?: number }[] }) {
   const path = usePathname();
   const isActive = (href: string) => {
     if (href === "/") return path === "/";
@@ -18,7 +18,8 @@ export function NavLinks({ links }: { links: { href: string; label: string; icon
           <Link href={l.href} aria-current={isActive(l.href) ? "page" : undefined}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-brand-hi ${isActive(l.href) ? "bg-white/10 text-white shadow-[inset_3px_0_0_#FF6B00]" : "text-mist/80 hover:bg-white/5 hover:text-white"}`}>
             <Icon name={l.icon} className={isActive(l.href) ? "text-brand-hi" : "opacity-80"} />
-            {l.label}
+            <span className="flex-1">{l.label}</span>
+            {!!l.badge && <span className="rounded-full bg-brand px-1.5 text-[11px] font-bold leading-5 text-white" aria-label={`${l.badge} unread`}>{l.badge > 99 ? "99+" : l.badge}</span>}
           </Link>
           {l.href === "/projects" && <div id="project-nav-slot" />}
         </div>

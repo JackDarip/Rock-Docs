@@ -13,7 +13,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (size !== s.size) return Response.json({ error: `Upload incomplete (${size} of ${s.size} bytes)` }, { status: 409 });
   const key = newKey(ctx.company.id, `projects/${s.projectId}/docs`, s.filename);
   await storage.move(ctx.company.id, tmp, key);
-  const scan = await scanFile(ctx.company.id, key);
+  let scan;
+  try { scan = await scanFile(ctx.company.id, key); }
+  catch (e) {
+    await storage.move(ctx.company.id, key, tmp); // keep the upload so "complete" can be retried
+    return Response.json({ error: e instanceof Error ? e.message : "Virus scanner unavailable" }, { status: 503 });
+  }
   if (scan === "INFECTED") {
     await storage.remove(ctx.company.id, key);
     return Response.json({ error: "This file failed the virus scan and was deleted." }, { status: 422 });

@@ -3,6 +3,8 @@ import { PRODUCT_NAME, TAGLINE, PLATFORM_OWNER } from "@/config/brand";
 import { getTenant } from "@/lib/tenant";
 import { createSession, getCurrentUser, verifyLogin } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+import { RocketSignIn } from "@/components/RocketSignIn";
+import { logoUrl } from "@/lib/logo";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +23,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (!tenant) redirect("/no-tenant");
   if (await getCurrentUser()) redirect("/");
   const { error } = await searchParams;
+  const logo = logoUrl(tenant);
   return (
-    <main className="relative grid min-h-screen overflow-hidden bg-night text-white lg:grid-cols-2">
-      <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/3 rounded-full bg-brand/15 blur-3xl" />
+    <main className="relative grid min-h-dvh grid-cols-1 overflow-hidden bg-night text-white lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      <div aria-hidden className="pointer-events-none absolute right-[18%] top-1/3 h-[34rem] w-[34rem] -translate-y-1/2 rounded-full bg-brand/15 blur-3xl" />
       <section className="relative hidden flex-col justify-between p-12 lg:flex">
         <Logo light />
         <div>
@@ -34,17 +37,21 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </div>
         <p className="text-sm text-mist/70">{PRODUCT_NAME} by {PLATFORM_OWNER}</p>
       </section>
-      <section className="relative flex items-center justify-center p-8">
-        <form action={login} className="w-full max-w-md rounded-2xl bg-white p-10 text-ink shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
-          <div className="mb-8 lg:hidden"><Logo /></div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-brand">{tenant.name}</div>
-          <h2 className="mb-8 text-4xl font-bold text-night">Sign in to {PRODUCT_NAME}</h2>
-          {error && <p className="mb-4 rounded-lg border border-warn-line bg-warn-bg p-3 text-sm text-warn">That email and password didn&apos;t match. Try again.</p>}
-          <label className="label" htmlFor="email">Email</label>
-          <input id="email" name="email" type="email" autoComplete="email" required className="input mb-5" />
-          <label className="label" htmlFor="password">Password</label>
-          <input id="password" name="password" type="password" autoComplete="current-password" required className="input mb-8" />
-          <button className="btn btn-primary w-full justify-center py-3">Sign in</button>
+      <section className="relative flex min-w-0 flex-col items-center justify-center px-4 pb-6 pt-6 sm:px-8 lg:pt-8">
+        <div className="mb-3 flex w-full max-w-[600px] flex-wrap items-center justify-between gap-x-3 gap-y-2 lg:justify-center">
+          <span className="lg:hidden"><Logo light /></span>
+          <div className="flex min-w-0 items-center gap-2">
+            {logo && <img src={logo} alt="" className="h-8 w-8 shrink-0 rounded-md bg-white object-contain p-0.5" />}
+            <span className="text-xs font-semibold uppercase tracking-wider text-brand-hi">{tenant.name}</span>
+          </div>
+        </div>
+        {error && (
+          <p role="alert" className="mb-2 w-full max-w-[600px] rounded-lg border border-amber-300/40 bg-amber-400/10 px-3 py-2 text-center text-sm text-amber-200">
+            ⚠ That email and password didn&apos;t match. Try again.
+          </p>
+        )}
+        <form action={login} className="w-full">
+          <RocketSignIn error={!!error} />
         </form>
       </section>
     </main>

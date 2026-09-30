@@ -19,7 +19,7 @@ export type MaterialT = {
 export type CrewT = { labor: { laborRoleId: string; count: number }[]; equipment: { equipmentId: string; count: number }[] };
 export type ProductionRateT = {
   id: string; activity: string; unit: string; outputPerDay: number | null; hoursPerDay: number;
-  crew: CrewT; verified: boolean;
+  crew: CrewT; verified: boolean; calibratedAt?: Date | string | null;
 };
 export type AssemblyMaterialT = { materialId: string; qtyPerUnit: number; unit?: string | null; note?: string | null };
 export type AssemblyT = { id: string; name: string; unit: string; productionRateId: string | null; materials: AssemblyMaterialT[] };
@@ -237,7 +237,8 @@ export function assemblyUnitCost(ctx: CalcContext, a: AssemblyT): AssemblyUnitCo
     issues.push(...crew.issues);
     if (!rate.verified) issues.push(`${rate.activity}: production rate not yet verified`);
     const crewStatus: ValueStatus = crew.issues.length || !rate.verified || uph.perHour <= 0
-      ? "UNVERIFIED" : crew.overridden || uph.overridden ? "OVERRIDE" : "VERIFIED";
+      ? "UNVERIFIED" : crew.overridden || uph.overridden ? "OVERRIDE" : rate.calibratedAt ? "CALIBRATED" : "VERIFIED";
+    if (rate.calibratedAt && crewStatus === "CALIBRATED") explain.push(`Production rate calibrated from your past jobs.`);
     parts.push({ kind: "LABOR", amount: labor, status: crewStatus, label: "Labor" });
     parts.push({ kind: "EQUIPMENT", amount: equipment, status: crewStatus, label: "Equipment" });
   }

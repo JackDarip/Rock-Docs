@@ -2,12 +2,16 @@ import { requireCtx } from "@/lib/auth";
 import { PageHeader, Card, Term } from "@/components/ui";
 import { EditableTable } from "@/components/EditableTable";
 import { StepNav } from "@/components/StepNav";
+import { SetupImport } from "@/components/SetupImport";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { aiEnabled } from "@/lib/ai";
 
 export default async function LaborStep() {
   const { db, isAdmin } = await requireCtx();
-  const [roles, pw] = await Promise.all([
+  const [roles, pw, drafts] = await Promise.all([
     db.laborRole.findMany({ orderBy: { name: "asc" } }),
     db.prevailingWageRate.findMany({ orderBy: [{ county: "asc" }, { classification: "asc" }] }),
+    db.importDraft.findMany({ where: { kind: "WAGES", status: { not: "DONE" } }, orderBy: { createdAt: "asc" } }),
   ]);
   return (
     <>
@@ -27,7 +31,9 @@ export default async function LaborStep() {
           ]} />
       </Card>
       <Card title="Prevailing wage by county / project">
-        <p className="mb-3 text-sm text-muted">Optional detail from wage determinations. Enter by hand now; uploading a wage determination PDF for AI extraction is on the roadmap.</p>
+        <AutoRefresh active={drafts.some((d) => d.status === "PROCESSING")} ms={4000} />
+        <p className="mb-3 text-sm text-muted">Optional detail from wage determinations. Type rates in, or upload the wage determination PDF: the AI reads every classification and you check each one before it&apos;s added.</p>
+        <div className="mb-4"><SetupImport kind="WAGES" readOnly={!isAdmin} aiOn={aiEnabled()} roles={roles.map((r) => ({ id: r.id, name: r.name }))} drafts={drafts.map((d) => ({ id: d.id, filename: d.filename, status: d.status, statusDetail: d.statusDetail, meta: d.meta, rows: d.rows as any[] }))} /></div>
         <EditableTable entity="prevailingWageRate" readOnly={!isAdmin} rows={pw} addLabel="Add rate"
           columns={[
             { key: "county", label: "County", required: true },
