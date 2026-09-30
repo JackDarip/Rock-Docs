@@ -10,7 +10,7 @@ import { getTenant } from "./tenant";
 export const SESSION_COOKIE = "rd_session";
 const SESSION_DAYS = 14;
 
-const hashToken = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
+export const hashToken = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
 
 export async function hashPassword(pw: string) {
   return bcrypt.hash(pw, 11);
